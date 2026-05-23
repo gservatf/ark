@@ -39,6 +39,7 @@ describe("createBrowserClient", () => {
           persistSession: true
         },
         global: {
+          fetch: expect.any(Function),
           headers: {
             "X-Client-Info": "cyp-web"
           }
