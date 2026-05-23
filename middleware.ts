@@ -11,6 +11,10 @@ const authPaths = new Set([
 ]);
 const middlewareTimeoutMs = 2000;
 
+function cleanPublicEnvValue(value: string | undefined) {
+  return value?.replace(/^\uFEFF/, "").trim();
+}
+
 function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
   return Promise.race([
     Promise.resolve(promise),
@@ -23,10 +27,10 @@ function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
+    cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!supabaseUrl || !supabaseKey) {
     return response;
