@@ -7,6 +7,7 @@ import { useState } from "react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { passwordRequirementsMessage, validatePassword } from "@/lib/auth/security";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import { buildAppUrl } from "@/lib/supabase/config";
@@ -38,19 +39,24 @@ export default function RegistroPage() {
 
     setIsLoading(true);
     const supabase = createBrowserClient();
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      options: {
-        ...(captchaToken ? { captchaToken } : {}),
-        emailRedirectTo: buildAppUrl("/onboarding")
-      },
-      password
-    });
+    const { data, error: signUpError } = await supabase.auth
+      .signUp({
+        email,
+        options: {
+          ...(captchaToken ? { captchaToken } : {}),
+          emailRedirectTo: buildAppUrl("/onboarding")
+        },
+        password
+      })
+      .catch((requestError: Error) => ({
+        data: { session: null, user: null },
+        error: requestError
+      }));
     setIsLoading(false);
     setCaptchaResetSignal((current) => current + 1);
 
     if (signUpError) {
-      setError("No se pudo crear la cuenta. Revisa el correo o intenta nuevamente.");
+      setError(getAuthErrorMessage(signUpError, "No se pudo crear la cuenta."));
       return;
     }
 
