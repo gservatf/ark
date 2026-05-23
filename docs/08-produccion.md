@@ -2,9 +2,11 @@
 
 ## Estado actual
 
-El proyecto todavía no está listo para producción. Supabase local-first ya está configurado y validado con migraciones, seed, tipos generados, Supabase Auth email/password endurecido, RLS por organización/proyecto, CRUDs persistentes principales, auditoría desde la aplicación, Realtime por Broadcast privado, Presence con identidad confiable, headers de seguridad web y RPCs transaccionales para las mutaciones críticas de presupuestos. Faltan cronogramas persistentes, reportes, configuración remota de CAPTCHA/SMTP/confirmación de email, staging y despliegue.
+El proyecto tiene un primer despliegue productivo funcional en Vercel con Supabase remoto enlazado. La app está publicada en `https://cyp-sistema-costos-presupuestos.vercel.app`, el proyecto Vercel es `diego-polacks-projects/cyp-sistema-costos-presupuestos` y Supabase remoto usa el ref `qrzyltggvixlsowxepxh`. El 2026-05-22 se aplicaron las 18 migraciones locales al remoto, se cargó `supabase/seed.sql`, se configuraron variables públicas de producción en Vercel y el deployment quedó `Ready`.
 
-La estrategia acordada es desarrollar primero contra Supabase local con Supabase CLI y Docker. Un proyecto Supabase remoto debe usarse recién para staging, producción o migración final, no como fuente primaria de cambios de esquema durante el desarrollo.
+El proyecto todavía no debe considerarse producción final para usuarios reales. Supabase local-first ya está configurado y validado con migraciones, seed, tipos generados, Supabase Auth email/password endurecido, RLS por organización/proyecto, CRUDs persistentes principales, auditoría desde la aplicación, Realtime por Broadcast privado, Presence con identidad confiable, headers de seguridad web y RPCs transaccionales para las mutaciones críticas de presupuestos. Faltan cronogramas persistentes y endurecimiento remoto de Auth: CAPTCHA, SMTP propio, confirmación de email, revisión final de URLs de Auth/OAuth y pruebas con usuarios reales.
+
+La estrategia acordada sigue siendo desarrollar primero contra Supabase local con Supabase CLI y Docker. El proyecto Supabase remoto queda como entorno de deploy/staging inicial, no como fuente primaria de cambios de esquema durante el desarrollo.
 
 La producción completa queda fuera del cierre del MVP colaborativo. Los goals posteriores a ese cierre viven en [Post-MVP, feature complete y goals](10-post-mvp-goals.md).
 
@@ -16,7 +18,7 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 - Backups y recuperación.
 - Monitoreo de errores.
 - Ambientes separados: desarrollo, staging y producción.
-- Proyecto Supabase remoto configurado solo cuando el esquema local esté estable.
+- Proyecto Supabase remoto ya enlazado para deploy inicial; mantener cambios de esquema desde migraciones versionadas locales.
 - Importación masiva de recursos.
 - Versionado formal de partidas.
 - Aprobaciones de presupuestos.
@@ -83,6 +85,8 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 10. Ajustar permisos, reportes y exportaciones.
 11. Publicar producción.
 
+Estado 2026-05-22: pasos 6, 7 y 11 ejecutados para un deploy inicial controlado. Los pasos de hardening remoto de Auth, Realtime, backups y verificación multiusuario siguen pendientes antes de exponer la app a usuarios reales.
+
 Los pasos 5 a 10 corresponden principalmente al backlog post-MVP y deben sincronizarse con `docs/10-post-mvp-goals.md`.
 
 ## Performance de consultas
@@ -97,10 +101,10 @@ Estos pasos no se ejecutan en el repo local. Son tareas de configuración en el 
 
 ### Auth y URLs
 
-- [ ] **Site URL**: setear al dominio público de Vercel (ej. `https://cyp.example.com`). No dejar `127.0.0.1`.
-- [ ] **Additional Redirect URLs**: agregar el dominio Vercel completo. Incluir variantes con/sin `www` si aplica. Sin esto, `resetPasswordForEmail`/`signUp` con `emailRedirectTo` fallan.
-- [ ] **OAuth callback**: agregar `https://<dominio>/auth/callback` en Additional Redirect URLs.
-- [ ] **`NEXT_PUBLIC_APP_URL`** en Vercel: setear al mismo dominio público para que `buildAppUrl` lo use en `signUp`/`resetPasswordForEmail`.
+- [ ] **Site URL**: setear al dominio público de Vercel (`https://cyp-sistema-costos-presupuestos.vercel.app`). No dejar `127.0.0.1`.
+- [ ] **Additional Redirect URLs**: agregar `https://cyp-sistema-costos-presupuestos.vercel.app` y `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback`. Sin esto, `resetPasswordForEmail`/`signUp` con `emailRedirectTo` pueden fallar.
+- [ ] **OAuth callback**: mantener `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback` en Additional Redirect URLs si se habilita Google OAuth.
+- [x] **`NEXT_PUBLIC_APP_URL`** en Vercel: seteado a `https://cyp-sistema-costos-presupuestos.vercel.app` para producción.
 
 ### Google OAuth
 

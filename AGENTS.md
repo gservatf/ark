@@ -36,7 +36,7 @@ Recursos -> Partidas/APU -> Presupuestos -> Cronogramas -> Reportes
 - Supabase local-first configurado con `supabase/config.toml`, `.env.local` local ignorado, scripts pnpm, migraciones, seed y tipos generados desde la base local.
 - Ya hay conexión real de UI a Supabase para proveedores, recursos, cotizaciones, partidas/APU y presupuestos; todavía faltan cronogramas persistentes.
 - Realtime colaborativo implementado con Broadcast privado desde `activity_events`, Presence efímero y resolución optimista de conflictos con `updated_at`.
-- Bugs/reaperturas de los chunks 1-8 cerrados en el repo; solo quedan checklists remotos de deploy documentados para CAPTCHA y redirect URLs de Supabase/Vercel.
+- Primer deploy productivo controlado realizado en Vercel + Supabase remoto: GitHub conectado a Vercel, Supabase remoto enlazado, migraciones/seed aplicados y variables públicas configuradas. Todavía quedan checklists remotos de hardening para CAPTCHA, SMTP, confirmación de email y redirect URLs de Supabase/Vercel antes de usuarios reales.
 
 ## Stack oficial
 
@@ -88,6 +88,8 @@ http://127.0.0.1:3000/presupuestos
 http://127.0.0.1:3000/presupuestos/<proyectoId>
 http://<IP-LAN-DE-LA-LAPTOP>:3000/
 http://<IP-LAN-DE-LA-LAPTOP>:3000/presupuestos
+https://cyp-sistema-costos-presupuestos.vercel.app/
+https://cyp-sistema-costos-presupuestos.vercel.app/presupuestos
 ```
 
 Variables públicas esperadas en `.env.local`:
