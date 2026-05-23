@@ -1,8 +1,12 @@
+function cleanPublicEnvValue(value: string | undefined) {
+  return value?.replace(/^\uFEFF/, "").trim();
+}
+
 export function getSupabaseBrowserConfig() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
+    cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
@@ -14,7 +18,7 @@ export function getSupabaseBrowserConfig() {
 }
 
 export function getPublicAppUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+  const configuredUrl = cleanPublicEnvValue(process.env.NEXT_PUBLIC_APP_URL) || "http://127.0.0.1:3000";
 
   try {
     const url = new URL(configuredUrl);

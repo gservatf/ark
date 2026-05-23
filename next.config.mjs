@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const isProduction = process.env.NODE_ENV === "production";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const cleanEnvValue = (value) => value?.replace(/^\uFEFF/, "").trim();
+const supabaseUrl = cleanEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const connectSources = [
   "'self'",
   "http://127.0.0.1:*",
