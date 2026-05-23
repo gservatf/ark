@@ -1,12 +1,12 @@
 ﻿# Bugs y optimizaciones detectados
 
-Última actualización: 2026-05-21.
+Última actualización: 2026-05-23.
 
 Este documento es el tracker de bugs, optimizaciones y mejoras detectadas durante la auditoría previa al deploy a GitHub/Vercel/Supabase remoto. Cada entrada incluye estado, severidad, archivo afectado, descripción, propuesta de solución y un espacio para notas de implementación.
 
 El backlog general del MVP vive en [Avances, pendientes y goals](09-avances-y-goals.md); las mejoras post-MVP en [Post-MVP, feature complete y goals](10-post-mvp-goals.md). Este documento es complementario y debe cerrarse antes de habilitar deploy productivo.
 
-Tras la ejecución de los chunks 1-8, los fixes parciales y regresiones detectados en la verificación cruzada quedaron cerrados en el repo. Solo quedan como checklist remoto pre-deploy `SEG-13` (CAPTCHA en Supabase remoto) y `SEG-26` (Site URL / redirect URLs del dominio Vercel definitivo), que no son bugs de código. Se preservan 4 entradas marcadas como **no-bug** para mantener el rastro de auditoría.
+Tras la ejecución de los chunks 1-8, los fixes parciales y regresiones detectados en la verificación cruzada quedaron cerrados en el repo. Los checklists remotos `SEG-13` (CAPTCHA en Supabase remoto) y `SEG-26` (Site URL / redirect URLs del dominio Vercel definitivo) también quedaron ejecutados en el entorno remoto. Se preservan 4 entradas marcadas como **no-bug** para mantener el rastro de auditoría.
 
 ## Convenciones
 
@@ -21,7 +21,8 @@ Tras la ejecución de los chunks 1-8, los fixes parciales y regresiones detectad
 | Resueltos verificados | 74 |
 | Parciales / reabiertos | 0 |
 | Pendientes nuevos de repo | 0 |
-| Checklist remoto pre-deploy | 2 |
+| Checklist remoto pre-deploy ejecutado | 2 |
+| Checklist remoto pre-deploy pendiente | 0 |
 | Verificados como no-bug | 4 |
 | **Total entradas** | **80** |
 
@@ -39,10 +40,10 @@ Tras la ejecución de los chunks 1-8, los fixes parciales y regresiones detectad
 
 Ítems que no son bugs del repo sino pasos de configuración que se ejecutan al momento del deploy a Supabase remoto + Vercel:
 
-| ID | Descripción breve |
-| --- | --- |
-| SEG-13 | Activar CAPTCHA en dashboard de Supabase remoto |
-| SEG-26 | Agregar URL pública de Vercel a `additional_redirect_urls` y `Site URL` |
+| ID | Descripción breve | Estado |
+| --- | --- | --- |
+| SEG-13 | Activar CAPTCHA en dashboard de Supabase remoto | [x] Ejecutado remoto |
+| SEG-26 | Agregar URL pública de Vercel a `additional_redirect_urls` y `Site URL` | [x] Ejecutado remoto |
 
 Detalle completo en la sección "Checklist Supabase remoto" de `docs/08-produccion.md`.
 
@@ -342,11 +343,11 @@ Resolver antes de uso con datos reales o múltiples usuarios concurrentes.
 
 ### SEG-26: `additional_redirect_urls` sin URL de producción
 
-- **Estado**: [ ] Checklist remoto — no es un bug del repo, es un paso de configuración que debe hacerse al momento de tener el dominio definitivo de Vercel.
+- **Estado**: [x] Checklist remoto ejecutado — no era un bug del repo.
 - **Archivo**: `supabase/config.toml:158` (referencia local) + dashboard remoto de Supabase.
 - **Descripción**: `additional_redirect_urls = ["https://127.0.0.1:3000"]` solo contiene localhost. Cuando se promueva a Supabase remoto, los flujos `resetPasswordForEmail`/`signUp` con `emailRedirectTo` apuntando al dominio real serán rechazados por Supabase Auth si no se agregan a la whitelist.
 - **Solución propuesta**: al obtener la URL pública (dominio Vercel), agregarla a `additional_redirect_urls` y al `Site URL` en el dashboard remoto de Supabase. Documentar el paso en `docs/08-produccion.md` como checklist pre-deploy. No corresponde codificar una URL placeholder hoy.
-- **Notas**: _(vacío)_
+- **Notas**: Ejecutado en Supabase remoto el 2026-05-22: Site URL y Additional Redirect URLs quedaron apuntando a `https://cyp-sistema-costos-presupuestos.vercel.app` y `/auth/callback`.
 
 ### UX-01: Modals sin focus trap, ESC ni `role="dialog"`
 
@@ -459,11 +460,11 @@ Resolver cuando se pueda. Afectan calidad pero no bloquean producción.
 
 ### SEG-13: Password policy débil
 
-- **Estado**: [ ] Checklist remoto — el fix de código quedó completo (length 12 + complejidad en cliente y `config.toml`). Lo que falta es activar CAPTCHA (`hcaptcha`/`turnstile`) en el dashboard de Supabase remoto, decisión que solo aplica al ambiente productivo. No bloquea local. Documentado en `docs/08-produccion.md` como paso pre-deploy.
+- **Estado**: [x] Resuelto remoto — el fix de código quedó completo y Cloudflare Turnstile quedó activo en Supabase remoto.
 - **Archivo**: `app/registro/page.tsx:22-25`, `supabase/config.toml:177-180`
 - **Descripción**: Solo length ≥ 8, sin complejidad, sin CAPTCHA. Permite brute force / abuso de signup.
 - **Solución propuesta**: En `config.toml` setear `password_requirements = "lower_upper_letters_digits"` y `minimum_password_length = 12`. Activar CAPTCHA (`hcaptcha` o `turnstile`) en `[auth.captcha]` para producción.
-- **Notas**: Resuelto en workspace el 2026-05-20: `supabase/config.toml` exige mínimo 12 caracteres y `lower_upper_letters_digits`; registro/actualización usan `validatePassword`. CAPTCHA queda documentado como requisito remoto, no activo localmente. Verificado con `pnpm run supabase:types`, pgTAP, `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint` y `pnpm build`. **Reclasificado el 2026-05-21 (Chunk 8c)**: el fix de código está completo; lo único pendiente es activar CAPTCHA en el dashboard remoto al momento del deploy productivo. No es bug del repo, es checklist remoto.
+- **Notas**: Resuelto en workspace el 2026-05-20: `supabase/config.toml` exige mínimo 12 caracteres y `lower_upper_letters_digits`; registro/actualización usan `validatePassword`. Verificado con `pnpm run supabase:types`, pgTAP, `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint` y `pnpm build`. **Reclasificado el 2026-05-21 (Chunk 8c)**: el fix de código estaba completo y faltaba activar CAPTCHA en remoto. **Cerrado remoto el 2026-05-23**: Cloudflare Turnstile quedó activo en Supabase y Vercel tiene `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
 ### SEG-14: `redirectTo` dinámico con `window.location.origin`
 
