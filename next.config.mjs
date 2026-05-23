@@ -6,6 +6,7 @@ const connectSources = [
   "'self'",
   "http://127.0.0.1:*",
   "ws://127.0.0.1:*",
+  "https://challenges.cloudflare.com",
   "https://*.supabase.co",
   "wss://*.supabase.co",
   supabaseUrl
@@ -19,7 +20,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+  "frame-src 'self' https://challenges.cloudflare.com",
   `connect-src ${connectSources.join(" ")}`,
   "form-action 'self'"
 ].join("; ");

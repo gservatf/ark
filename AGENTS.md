@@ -36,7 +36,7 @@ Recursos -> Partidas/APU -> Presupuestos -> Cronogramas -> Reportes
 - Supabase local-first configurado con `supabase/config.toml`, `.env.local` local ignorado, scripts pnpm, migraciones, seed y tipos generados desde la base local.
 - Ya hay conexión real de UI a Supabase para proveedores, recursos, cotizaciones, partidas/APU y presupuestos; todavía faltan cronogramas persistentes.
 - Realtime colaborativo implementado con Broadcast privado desde `activity_events`, Presence efímero y resolución optimista de conflictos con `updated_at`.
-- Primer deploy productivo controlado realizado en Vercel + Supabase remoto: GitHub conectado a Vercel, Supabase remoto enlazado, migraciones/seed aplicados y variables públicas configuradas. Todavía quedan checklists remotos de hardening para CAPTCHA, SMTP, confirmación de email y redirect URLs de Supabase/Vercel antes de usuarios reales.
+- Primer deploy productivo controlado realizado en Vercel + Supabase remoto: GitHub conectado a Vercel, Supabase remoto enlazado, migraciones/seed aplicados, variables públicas configuradas, Site URL/Redirect URLs de Auth, confirmación de email, reglas fuertes de contraseña y SSL enforcement remoto aplicados. Todavía quedan checklists remotos de hardening para SMTP, CAPTCHA con claves reales, Google OAuth si aplica, Realtime público, backups y pruebas multiusuario antes de usuarios reales.
 
 ## Stack oficial
 
@@ -98,6 +98,8 @@ Variables públicas esperadas en `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-local>
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
+# Opcional si se activa CAPTCHA en Supabase remoto.
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=<turnstile-site-key>
 # Opcional para OAuth Google local si se habilita [auth.external.google].
 GOOGLE_OAUTH_CLIENT_ID=<google-client-id>
 GOOGLE_OAUTH_CLIENT_SECRET=<google-client-secret>

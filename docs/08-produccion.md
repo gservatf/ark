@@ -2,9 +2,9 @@
 
 ## Estado actual
 
-El proyecto tiene un primer despliegue productivo funcional en Vercel con Supabase remoto enlazado. La app está publicada en `https://cyp-sistema-costos-presupuestos.vercel.app`, el proyecto Vercel es `diego-polacks-projects/cyp-sistema-costos-presupuestos` y Supabase remoto usa el ref `qrzyltggvixlsowxepxh`. El 2026-05-22 se aplicaron las 18 migraciones locales al remoto, se cargó `supabase/seed.sql`, se configuraron variables públicas de producción en Vercel y el deployment quedó `Ready`.
+El proyecto tiene un primer despliegue productivo funcional en Vercel con Supabase remoto enlazado. La app está publicada en `https://cyp-sistema-costos-presupuestos.vercel.app`, el proyecto Vercel es `diego-polacks-projects/cyp-sistema-costos-presupuestos` y Supabase remoto usa el ref `qrzyltggvixlsowxepxh`. El 2026-05-22 se aplicaron las 18 migraciones locales al remoto, se cargó `supabase/seed.sql`, se configuraron variables públicas de producción en Vercel y el deployment quedó `Ready`. También se configuraron Site URL/Redirect URLs de Auth, confirmación de email, reglas fuertes de contraseña, reautenticación para cambio de clave y SSL enforcement remoto.
 
-El proyecto todavía no debe considerarse producción final para usuarios reales. Supabase local-first ya está configurado y validado con migraciones, seed, tipos generados, Supabase Auth email/password endurecido, RLS por organización/proyecto, CRUDs persistentes principales, auditoría desde la aplicación, Realtime por Broadcast privado, Presence con identidad confiable, headers de seguridad web y RPCs transaccionales para las mutaciones críticas de presupuestos. Faltan cronogramas persistentes y endurecimiento remoto de Auth: CAPTCHA, SMTP propio, confirmación de email, revisión final de URLs de Auth/OAuth y pruebas con usuarios reales.
+El proyecto todavía no debe considerarse producción final para usuarios reales. Supabase local-first ya está configurado y validado con migraciones, seed, tipos generados, Supabase Auth email/password endurecido, RLS por organización/proyecto, CRUDs persistentes principales, auditoría desde la aplicación, Realtime por Broadcast privado, Presence con identidad confiable, headers de seguridad web y RPCs transaccionales para las mutaciones críticas de presupuestos. Faltan cronogramas persistentes y endurecimiento remoto que requiere credenciales externas: SMTP propio, CAPTCHA con Cloudflare Turnstile, Google OAuth si aplica, verificación de `Allow public access` en Realtime y pruebas con usuarios reales.
 
 La estrategia acordada sigue siendo desarrollar primero contra Supabase local con Supabase CLI y Docker. El proyecto Supabase remoto queda como entorno de deploy/staging inicial, no como fuente primaria de cambios de esquema durante el desarrollo.
 
@@ -12,7 +12,7 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 
 ## Pendientes fuera del mock inicial
 
-- Endurecimiento remoto de Auth para staging/producción: confirmación de email, SMTP real, Google OAuth configurado, rate limits revisados, CAPTCHA configurado en Supabase remoto y política de signup público.
+- Endurecimiento remoto de Auth para staging/producción: SMTP real, Google OAuth si aplica, rate limits revisados con SMTP propio, CAPTCHA configurado en Supabase remoto y política de signup público.
 - Extender Presence y resolución de conflictos a cronogramas cuando se vuelvan persistentes.
 - Conexión productiva completa para cronogramas, reportes y módulos pendientes.
 - Backups y recuperación.
@@ -41,6 +41,7 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 - Los redirects de Auth deben usar `NEXT_PUBLIC_APP_URL` y el remoto debe restringir Site URL / Additional Redirect URLs a dominios propios.
 - Google OAuth usa `/auth/callback` para intercambiar el código por sesión; ese callback debe estar permitido en Supabase y en Google Cloud.
 - La app incluye CSP, `frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy: same-origin`, `Permissions-Policy` y HSTS solo en producción.
+- La app incluye soporte opcional de Cloudflare Turnstile en login, registro y recuperación de clave. Solo se muestra cuando `NEXT_PUBLIC_TURNSTILE_SITE_KEY` existe; para activarlo por completo también se debe guardar el Secret Key en Supabase Auth > Bot and Abuse Protection.
 
 ## Datos
 
@@ -85,7 +86,7 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 10. Ajustar permisos, reportes y exportaciones.
 11. Publicar producción.
 
-Estado 2026-05-22: pasos 6, 7 y 11 ejecutados para un deploy inicial controlado. Los pasos de hardening remoto de Auth, Realtime, backups y verificación multiusuario siguen pendientes antes de exponer la app a usuarios reales.
+Estado 2026-05-22: pasos 6, 7 y 11 ejecutados para un deploy inicial controlado. Site URL/Redirect URLs, confirmación de email, reglas de contraseña y SSL enforcement remoto quedaron aplicados. Los pasos que requieren credenciales externas de Auth, Realtime, backups y verificación multiusuario siguen pendientes antes de exponer la app a usuarios reales.
 
 Los pasos 5 a 10 corresponden principalmente al backlog post-MVP y deben sincronizarse con `docs/10-post-mvp-goals.md`.
 
@@ -101,9 +102,9 @@ Estos pasos no se ejecutan en el repo local. Son tareas de configuración en el 
 
 ### Auth y URLs
 
-- [ ] **Site URL**: setear al dominio público de Vercel (`https://cyp-sistema-costos-presupuestos.vercel.app`). No dejar `127.0.0.1`.
-- [ ] **Additional Redirect URLs**: agregar `https://cyp-sistema-costos-presupuestos.vercel.app` y `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback`. Sin esto, `resetPasswordForEmail`/`signUp` con `emailRedirectTo` pueden fallar.
-- [ ] **OAuth callback**: mantener `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback` en Additional Redirect URLs si se habilita Google OAuth.
+- [x] **Site URL**: seteado al dominio público de Vercel (`https://cyp-sistema-costos-presupuestos.vercel.app`).
+- [x] **Additional Redirect URLs**: agregados `https://cyp-sistema-costos-presupuestos.vercel.app` y `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback`.
+- [x] **OAuth callback**: `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback` queda permitido en Supabase Auth para cuando se habilite Google OAuth.
 - [x] **`NEXT_PUBLIC_APP_URL`** en Vercel: seteado a `https://cyp-sistema-costos-presupuestos.vercel.app` para producción.
 
 ### Google OAuth
@@ -115,21 +116,22 @@ Estos pasos no se ejecutan en el repo local. Son tareas de configuración en el 
 
 ### Confirmación de email y SMTP
 
-- [ ] **`enable_confirmations = true`** en `[auth.email]` del dashboard remoto (en local queda en `false` para iterar rápido).
+- [x] **`enable_confirmations = true`** en `[auth.email]` del dashboard remoto (en local queda en `false` para iterar rápido).
 - [ ] **SMTP propio**: configurar `[auth.email.smtp]` con un proveedor real (SendGrid, AWS SES, Mailgun, etc.). Sin SMTP propio, Supabase usa rate limits muy estrictos.
 - [ ] **`max_frequency` y `email_sent`**: ajustar rate limits según volumen esperado de signups y resets. Defaults muy bajos para tráfico real.
 
 ### Anti-abuso
 
-- [ ] **CAPTCHA**: activar `[auth.captcha]` con `hcaptcha` o `turnstile` (Cloudflare). Configurar las claves en el dashboard remoto. Sin CAPTCHA, signup público es vulnerable a brute force y abuso.
-- [ ] **`secure_password_change = true`**: ya está en `supabase/config.toml` local; verificar que esté activo en remoto. Exige re-autenticación al cambiar contraseña.
-- [ ] **Password requirements**: en remoto setear igual al local (`minimum_password_length = 12`, `password_requirements = "lower_upper_letters_digits"`). Considerar ampliar a `lower_upper_letters_digits_symbols` si el target lo justifica.
+- [ ] **CAPTCHA**: activar `turnstile` (Cloudflare) en Supabase remoto cuando existan Site Key y Secret Key. La UI ya soporta `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+- [x] **`secure_password_change = true`**: activo en remoto. Exige re-autenticación al cambiar contraseña.
+- [x] **Password requirements**: remoto alineado con local (`minimum_password_length = 12`, `password_requirements = "lower_upper_letters_digits"`). Considerar ampliar a `lower_upper_letters_digits_symbols` si el target lo justifica.
 
 ### Realtime y seguridad de red
 
 - [ ] **Realtime: `Allow public access = false`**. Los canales del proyecto se autorizan vía RLS en `realtime.messages`.
 - [ ] **Network restrictions**: si el target lo requiere, configurar `db.network_restrictions` con CIDRs específicos.
 - [ ] **Backups**: confirmar que Supabase remoto tiene backups automáticos activos y un plan de retención adecuado.
+- [x] **SSL enforcement remoto**: activado para exigir SSL en conexiones externas a Postgres.
 
 ### Verificación post-deploy
 

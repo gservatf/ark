@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { AuthPanel } from "@/components/auth/AuthPanel";
+import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import { buildAppUrl } from "@/lib/supabase/config";
 
 export default function RecuperarClavePage() {
   const [email, setEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,13 +21,21 @@ export default function RecuperarClavePage() {
     event.preventDefault();
     setMessage(null);
     setError(null);
+
+    if (isCaptchaEnabled() && !captchaToken) {
+      setError("Completa la verificacion de seguridad antes de enviar el enlace.");
+      return;
+    }
+
     setIsLoading(true);
 
     const supabase = createBrowserClient();
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      ...(captchaToken ? { captchaToken } : {}),
       redirectTo: buildAppUrl("/actualizar-clave")
     });
     setIsLoading(false);
+    setCaptchaResetSignal((current) => current + 1);
 
     if (resetError) {
       setError("No se pudo enviar el correo de recuperación.");
@@ -53,6 +64,8 @@ export default function RecuperarClavePage() {
 
         {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
         {message ? <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p> : null}
+
+        <TurnstileCaptcha onTokenChange={setCaptchaToken} resetSignal={captchaResetSignal} />
 
         <Button className="w-full justify-center" disabled={isLoading} type="submit">
           {isLoading ? "Enviando..." : "Enviar enlace"}

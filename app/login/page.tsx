@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { AuthPanel } from "@/components/auth/AuthPanel";
+import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
 import { buildOAuthRedirectTo } from "@/lib/auth/oauth";
 import { sanitizeNextPath } from "@/lib/auth/security";
@@ -21,21 +22,31 @@ function LoginForm() {
       ? "No se pudo completar el inicio de sesión con Google."
       : null
   );
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetSignal, setCaptchaResetSignal] = useState(0);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (isCaptchaEnabled() && !captchaToken) {
+      setError("Completa la verificacion de seguridad antes de iniciar sesion.");
+      return;
+    }
+
     setIsLoading(true);
 
     const supabase = createBrowserClient();
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
+      options: captchaToken ? { captchaToken } : undefined,
       password
     });
 
     setIsLoading(false);
+    setCaptchaResetSignal((current) => current + 1);
 
     if (signInError) {
       setError("No se pudo iniciar sesión. Revisa el correo y la contraseña.");
@@ -108,6 +119,8 @@ function LoginForm() {
         </label>
 
         {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+
+        <TurnstileCaptcha onTokenChange={setCaptchaToken} resetSignal={captchaResetSignal} />
 
         <Button className="w-full justify-center" disabled={isLoading || isGoogleLoading} type="submit">
           {isLoading ? "Ingresando..." : "Entrar"}
