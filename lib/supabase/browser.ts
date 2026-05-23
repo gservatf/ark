@@ -1,5 +1,4 @@
-import { createBrowserClient as createSupabaseBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseBrowserConfig } from "./config";
 import type { Database } from "./types";
@@ -13,7 +12,18 @@ export function createBrowserClient() {
 
   const { supabaseKey, supabaseUrl } = getSupabaseBrowserConfig();
 
-  browserClient = createSupabaseBrowserClient<Database>(supabaseUrl, supabaseKey);
+  browserClient = createClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      persistSession: true
+    },
+    global: {
+      headers: {
+        "X-Client-Info": "cyp-web"
+      }
+    }
+  });
 
   return browserClient;
 }

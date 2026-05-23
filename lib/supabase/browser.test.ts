@@ -8,14 +8,14 @@ describe("createBrowserClient", () => {
 
   it("reutiliza una unica instancia del cliente Supabase en el modulo", async () => {
     const supabaseClient = { auth: {} };
-    const createSupabaseBrowserClient = vi.fn(() => supabaseClient);
+    const createSupabaseClient = vi.fn(() => supabaseClient);
     const getSupabaseBrowserConfig = vi.fn(() => ({
       supabaseKey: "anon-key",
       supabaseUrl: "http://127.0.0.1:54321"
     }));
 
-    vi.doMock("@supabase/ssr", () => ({
-      createBrowserClient: createSupabaseBrowserClient
+    vi.doMock("@supabase/supabase-js", () => ({
+      createClient: createSupabaseClient
     }));
     vi.doMock("./config", () => ({
       getSupabaseBrowserConfig
@@ -28,10 +28,22 @@ describe("createBrowserClient", () => {
 
     expect(firstClient).toBe(secondClient);
     expect(firstClient).toBe(supabaseClient);
-    expect(createSupabaseBrowserClient).toHaveBeenCalledTimes(1);
-    expect(createSupabaseBrowserClient).toHaveBeenCalledWith(
+    expect(createSupabaseClient).toHaveBeenCalledTimes(1);
+    expect(createSupabaseClient).toHaveBeenCalledWith(
       "http://127.0.0.1:54321",
-      "anon-key"
+      "anon-key",
+      {
+        auth: {
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          persistSession: true
+        },
+        global: {
+          headers: {
+            "X-Client-Info": "cyp-web"
+          }
+        }
+      }
     );
     expect(getSupabaseBrowserConfig).toHaveBeenCalledTimes(1);
   });
