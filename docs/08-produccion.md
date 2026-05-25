@@ -40,7 +40,7 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 - Las contraseñas ya exigen mínimo 12 caracteres con minúscula, mayúscula y número en UI y `supabase/config.toml`; `secure_password_change` queda activo.
 - Los redirects de Auth deben usar `NEXT_PUBLIC_APP_URL` y el remoto debe restringir Site URL / Additional Redirect URLs a dominios propios.
 - Google OAuth usa `/auth/callback` para intercambiar el código por sesión; ese callback debe estar permitido en Supabase y en Google Cloud.
-- Recuperación de contraseña usa `/auth/callback?next=/actualizar-clave` como `redirectTo`; el callback intercambia el código de Supabase por sesión temporal antes de mostrar el formulario de nueva contraseña.
+- Recuperación de contraseña usa `/auth/callback?next=/actualizar-clave` como `redirectTo`; el callback intercambia el código de Supabase por sesión temporal antes de mostrar el formulario de nueva contraseña. `/actualizar-clave` debe quedar accesible aunque exista usuario activo, porque Supabase crea esa sesión temporal durante el reset.
 - La app incluye CSP, `frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy: same-origin`, `Permissions-Policy` y HSTS solo en producción.
 - La app incluye soporte opcional de Cloudflare Turnstile en login, registro y recuperación de clave. Solo se muestra cuando `NEXT_PUBLIC_TURNSTILE_SITE_KEY` existe; para activarlo por completo también se debe guardar el Secret Key en Supabase Auth > Bot and Abuse Protection.
 

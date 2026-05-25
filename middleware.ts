@@ -9,6 +9,7 @@ const authPaths = new Set([
   "/recuperar-clave",
   "/actualizar-clave"
 ]);
+const guestOnlyAuthPaths = new Set(["/login", "/registro", "/recuperar-clave"]);
 const middlewareTimeoutMs = 2000;
 
 function cleanPublicEnvValue(value: string | undefined) {
@@ -74,7 +75,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isAuthPath) {
+  if (user && guestOnlyAuthPaths.has(pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/";
     redirectUrl.search = "";
