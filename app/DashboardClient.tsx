@@ -12,7 +12,7 @@ import {
   WalletCards
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ElementType } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -34,6 +34,7 @@ import { createBrowserClient } from "@/lib/supabase/browser";
 import type { ProjectInput } from "@/lib/validations/projects";
 
 export default function HomePage() {
+  const pathname = usePathname();
   const router = useRouter();
   const [projects, setProjects] = useState<BudgetDashboardProject[]>([]);
   const [scope, setScope] = useState<DataScope | null>(null);
@@ -42,6 +43,7 @@ export default function HomePage() {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [createProjectError, setCreateProjectError] = useState<string | null>(null);
+  const [localToasts, setLocalToasts] = useState<Array<{ description: string; id: string; title: string }>>([]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -74,6 +76,27 @@ export default function HomePage() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const currentParams = new URLSearchParams(window.location.search);
+
+    if (currentParams.get("auth") !== "password-updated") {
+      return;
+    }
+
+    setLocalToasts((current) => [
+      ...current.filter((toast) => toast.id !== "password-updated"),
+      {
+        description: "Tu nueva contrasena quedo guardada correctamente.",
+        id: "password-updated",
+        title: "Contrasena actualizada"
+      }
+    ]);
+
+    currentParams.delete("auth");
+    const nextSearch = currentParams.toString();
+    router.replace(nextSearch ? `${pathname}?${nextSearch}` : pathname, { scroll: false });
+  }, [pathname, router]);
+
   const activityTopic = useMemo(
     () => (scope ? { organizacionId: scope.organizacionId, type: "org" as const } : undefined),
     [scope]
@@ -84,6 +107,14 @@ export default function HomePage() {
     onRefetch: loadData,
     topicScope: activityTopic
   });
+  const toasts = useMemo(() => [...localToasts, ...activity.toasts], [activity.toasts, localToasts]);
+  const dismissToast = useCallback(
+    (id: string) => {
+      setLocalToasts((current) => current.filter((toast) => toast.id !== id));
+      activity.dismissToast(id);
+    },
+    [activity]
+  );
 
   const handleCreateProject = useCallback(
     async (input: ProjectInput) => {
@@ -131,9 +162,9 @@ export default function HomePage() {
     return (
       <AppLayout>
         <ActivityToasts
-          onDismiss={activity.dismissToast}
+          onDismiss={dismissToast}
           status={activity.status}
-          toasts={activity.toasts}
+          toasts={toasts}
         />
         <div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8">
           <LoadingState label="Cargando dashboard" rows={6} />
@@ -146,9 +177,9 @@ export default function HomePage() {
     return (
       <AppLayout>
         <ActivityToasts
-          onDismiss={activity.dismissToast}
+          onDismiss={dismissToast}
           status={activity.status}
-          toasts={activity.toasts}
+          toasts={toasts}
         />
         <div className="mx-auto w-full max-w-[1680px] px-5 py-6 lg:px-8">
           <EmptyState
@@ -164,9 +195,9 @@ export default function HomePage() {
   return (
     <AppLayout>
       <ActivityToasts
-        onDismiss={activity.dismissToast}
+        onDismiss={dismissToast}
         status={activity.status}
-        toasts={activity.toasts}
+        toasts={toasts}
       />
       <ProjectCreateDialog
         error={createProjectError}

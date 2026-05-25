@@ -33,7 +33,7 @@ export default function ActualizarClavePage() {
       return;
     }
 
-    router.replace("/");
+    router.replace("/?auth=password-updated");
     router.refresh();
   }
 

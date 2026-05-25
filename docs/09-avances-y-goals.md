@@ -91,7 +91,7 @@ Seguir todos los goals de este documento debe llevar a un MVP completo y colabor
 - QA presupuestos 2026-05-22: corregida la sincronización entre la selección de línea y el parámetro `?linea=` para que el desglose APU no alterne entre partidas al seleccionar filas.
 - Deploy inicial 2026-05-22: GitHub quedó conectado a Vercel, proyecto Vercel `diego-polacks-projects/cyp-sistema-costos-presupuestos` publicado en `https://cyp-sistema-costos-presupuestos.vercel.app`, Supabase remoto `qrzyltggvixlsowxepxh` enlazado, 18 migraciones aplicadas, `supabase/seed.sql` cargado y variables públicas de producción configuradas en Vercel.
 - Hardening remoto inicial 2026-05-23: Supabase Auth remoto quedó con Site URL/Redirect URLs de Vercel, confirmación de email, SMTP Resend para `polacklabs.com`, contraseña mínima de 12 caracteres, requisito de minúscula/mayúscula/número, reautenticación para cambio de clave, Cloudflare Turnstile activo, Realtime público desactivado y SSL enforcement externo.
-- Recuperación de contraseña 2026-05-25: el email de reset ahora redirige por `/auth/callback?next=/actualizar-clave`, reutilizando la URL autorizada en Supabase para crear la sesión temporal antes de cambiar contraseña. El middleware permite `/actualizar-clave` con sesión activa para no mandar el reset al dashboard.
+- Recuperación de contraseña 2026-05-25: el email de reset ahora redirige por `/auth/callback?next=/actualizar-clave`, reutilizando la URL autorizada en Supabase para crear la sesión temporal antes de cambiar contraseña. El middleware permite `/actualizar-clave` con sesión activa para no mandar el reset al dashboard, y el dashboard muestra un toast de confirmación cuando el cambio se guarda.
 
 ## Pendientes principales
 
