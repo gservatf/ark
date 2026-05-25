@@ -1621,7 +1621,7 @@ export type Database = {
         Returns: {
           organizacion_id: string
           organizacion_miembro_id: string
-          user_id: string
+          perfil_user_id: string
         }[]
       }
       create_project_with_current_member: {

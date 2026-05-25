@@ -77,6 +77,8 @@ El modelo colaborativo ya tiene RLS productivo activado sobre todas las tablas p
 
 El onboarding nuevo usa la RPC `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar `user_profiles.display_name` y crear automáticamente una organización vacía con el usuario como `owner`. No crea proyecto inicial; el dashboard vacío muestra una llamada a crear el primer proyecto.
 
+`user_profiles.display_name` no es único ni se usa para permisos. Pueden existir usuarios con el mismo nombre y apellido; la identidad confiable para auditoría, ownership y colaboración sigue siendo `auth.users.id`/`actor_id`. Cuando la UI necesite desambiguar personas, debe mostrar un dato adicional permitido, como correo verificado o contexto de membresía.
+
 La RPC legacy `create_organization_with_owner(nombre_org, ruc_org, nombre_proyecto, cliente, ubicacion)` queda disponible para compatibilidad, pero ya no es el flujo principal de onboarding.
 
 La RPC de onboarding rechaza usuarios que ya tienen una membresía activa y valida que el RUC, cuando existe, cumpla `^[0-9]{11}$` antes de insertar.
