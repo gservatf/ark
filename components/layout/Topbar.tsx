@@ -412,6 +412,7 @@ export function Topbar() {
               ) : null}
             </button>
             <InvitationNotificationsPanel
+              activeOrganization={activeOrganization}
               onAccepted={() => {
                 void reloadWorkspace();
                 router.refresh();

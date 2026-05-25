@@ -265,4 +265,5 @@ Reglas UX:
 - Los roles visibles de proyecto se simplifican a `Lector`, `Editor` y `Admin`.
 - La Configuracion del Sidebar apunta a `/configuracion/proyecto` y queda reservada para ajustes del proyecto activo.
 - El boton de notificaciones del Topbar muestra invitaciones recibidas y permite aceptarlas o rechazarlas sin salir del contexto actual.
+- Para owners/admins, el mismo panel muestra decisiones recientes del equipo: invitaciones aceptadas o rechazadas. Las invitaciones enviadas solo listan pendientes.
 - El dashboard adapta el empty state: en espacios personales invita a crear el primer proyecto; en organizaciones de empresa sin proyectos asignados explica que un owner/admin debe asignar acceso.

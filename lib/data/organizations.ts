@@ -25,6 +25,7 @@ export type OrganizationInvitation = {
   proyectoNombres?: string[];
   rolOrganizacion: "admin" | "miembro" | "owner";
   rolProyecto: ProjectAccessRole | null;
+  updatedAt?: string;
 };
 
 export type ProjectAccessRole = "admin" | "editor" | "lector";
@@ -160,6 +161,21 @@ export async function listReceivedOrganizationInvitations(
 
   if (error) {
     return dataFailure(normalizeSupabaseError(error, "organizaciones.receivedInvitesRpc"));
+  }
+
+  return dataSuccess((data || []) as unknown as OrganizationInvitation[]);
+}
+
+export async function listOrganizationInvitationNotifications(
+  client: DataClient,
+  organizationId: string
+): Promise<DataResult<OrganizationInvitation[]>> {
+  const { data, error } = await client.rpc("list_organization_invitation_notifications", {
+    p_organizacion_id: organizationId
+  });
+
+  if (error) {
+    return dataFailure(normalizeSupabaseError(error, "organizaciones.inviteNotificationsRpc"));
   }
 
   return dataSuccess((data || []) as unknown as OrganizationInvitation[]);

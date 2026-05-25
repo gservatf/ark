@@ -405,3 +405,10 @@ Notas: los modales compartidos tienen semantica/foco/teclado accesible; tablas a
 - Los roles visibles de proyecto se simplificaron a `Lector`, `Editor` y `Admin`; `presupuestador` queda solo como compatibilidad tecnica en el enum historico.
 - RLS reconoce acceso global a proyectos por miembro de organizacion con rol predeterminado, incluyendo proyectos creados despues de aceptar la invitacion.
 - Verificacion: `pnpm run supabase:reset`, `pnpm run supabase:types`, `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit` y smoke con Browser en local.
+
+### Hotfix invitaciones 2026-05-25
+
+- `RESEND_API_KEY` quedo documentado tambien en `.env.local` local como variable esperada.
+- La lista de invitaciones enviadas muestra solo invitaciones pendientes.
+- Owners/admins ven en Notificaciones las invitaciones aceptadas o rechazadas dentro de la organizacion activa.
+- Verificacion: `pnpm run supabase:reset` aplico migraciones y seed localmente, pero cerro con aviso de healthcheck en Storage; luego pasaron `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test` y `pnpm build`.

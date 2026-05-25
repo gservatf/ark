@@ -1858,6 +1858,10 @@ export type Database = {
         Args: { p_organizacion_id?: string }
         Returns: Json
       }
+      list_organization_invitation_notifications: {
+        Args: { p_organizacion_id: string }
+        Returns: Json
+      }
       list_received_organization_invitations: { Args: never; Returns: Json }
       list_sent_organization_invitations: {
         Args: { p_organizacion_id: string }
