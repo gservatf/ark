@@ -1,4 +1,4 @@
-import { Edit3, Eye, EyeOff, Power, PowerOff, WalletCards } from "lucide-react";
+import { Edit3, Eye, EyeOff, Power, PowerOff, Trash2, WalletCards } from "lucide-react";
 import { memo, useCallback } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -171,13 +171,13 @@ const ProviderTableRow = memo(function ProviderTableRow({
           />
           <IconAction
             disabled={!canMutate || provider.estado === "inactivo"}
-            icon={PowerOff}
+            icon={Trash2}
             label={
               provider.estado === "inactivo"
                 ? `${provider.nombre} ya esta inactivo`
                 : canMutate
-                  ? `Desactivar ${provider.nombre}`
-                  : "Solo admins de proyecto u organización pueden desactivar"
+                  ? `Eliminar ${provider.nombre}`
+                  : "Solo admins de proyecto u organización pueden eliminar"
             }
             onClick={handleDeactivate}
           />

@@ -1,4 +1,4 @@
-import { PowerOff } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import type { Proveedor } from "@/types/domain";
 
@@ -17,12 +17,12 @@ export function ConfirmDeleteProviderDialog({
 }: ConfirmDeleteProviderDialogProps) {
   return (
     <ConfirmDialog
-      confirmIcon={PowerOff}
-      confirmLabel="Desactivar"
+      confirmIcon={Trash2}
+      confirmLabel="Eliminar"
       onCancel={onCancel}
       onConfirm={onConfirm}
       open={Boolean(provider)}
-      title="Desactivar proveedor"
+      title="Eliminar proveedor"
       tone="warning"
     >
       {provider ? (

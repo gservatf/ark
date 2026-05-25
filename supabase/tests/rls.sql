@@ -180,6 +180,27 @@ select lives_ok(
 );
 select lives_ok(
   $$
+    insert into public.activity_events (
+      organizacion_id,
+      actor_id,
+      entity_type,
+      entity_id,
+      action
+    )
+    select
+      '00000000-0000-0000-0000-000000000901',
+      '00000000-0000-0000-0000-00000000a003',
+      'proveedor',
+      p.id,
+      'create'
+    from public.proveedores p
+    where p.nombre = 'Proveedor creado por admin proyecto'
+    limit 1
+  $$,
+  'admin de proyecto registra auditoria de proveedor para realtime'
+);
+select lives_ok(
+  $$
     insert into public.recursos (
       organizacion_id,
       nombre,
