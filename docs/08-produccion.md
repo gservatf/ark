@@ -4,7 +4,7 @@
 
 El proyecto tiene un primer despliegue productivo funcional en Vercel con Supabase remoto enlazado. La app está publicada en `https://cyp-sistema-costos-presupuestos.vercel.app`, el proyecto Vercel es `diego-polacks-projects/cyp-sistema-costos-presupuestos` y Supabase remoto usa el ref `qrzyltggvixlsowxepxh`. El 2026-05-22 se aplicaron las 18 migraciones locales al remoto, se cargó `supabase/seed.sql`, se configuraron variables públicas de producción en Vercel y el deployment quedó `Ready`. También se configuraron Site URL/Redirect URLs de Auth, confirmación de email, SMTP con Resend, reglas fuertes de contraseña, Cloudflare Turnstile, reautenticación para cambio de clave, Realtime con canales públicos desactivados y SSL enforcement remoto.
 
-El proyecto todavía no debe considerarse producción final para usuarios reales. Supabase local-first ya está configurado y validado con migraciones, seed, tipos generados, Supabase Auth email/password endurecido, RLS por organización/proyecto, CRUDs persistentes principales, auditoría desde la aplicación, Realtime por Broadcast privado, Presence con identidad confiable, headers de seguridad web y RPCs transaccionales para las mutaciones críticas de presupuestos. Faltan cronogramas persistentes, Google OAuth si aplica, backups, monitoreo operativo y pruebas con usuarios reales.
+El proyecto todavía no debe considerarse producción final para usuarios reales. Supabase local-first ya está configurado y validado con migraciones, seed, tipos generados, Supabase Auth email/password endurecido, Google OAuth remoto, RLS por organización/proyecto, CRUDs persistentes principales, auditoría desde la aplicación, Realtime por Broadcast privado, Presence con identidad confiable, headers de seguridad web y RPCs transaccionales para las mutaciones críticas de presupuestos. Faltan cronogramas persistentes, backups, monitoreo operativo y pruebas con usuarios reales.
 
 La estrategia acordada sigue siendo desarrollar primero contra Supabase local con Supabase CLI y Docker. El proyecto Supabase remoto queda como entorno de deploy/staging inicial, no como fuente primaria de cambios de esquema durante el desarrollo.
 
@@ -12,7 +12,7 @@ La producción completa queda fuera del cierre del MVP colaborativo. Los goals p
 
 ## Pendientes fuera del mock inicial
 
-- Endurecimiento remoto de Auth para staging/producción: Google OAuth si aplica, rate limits revisados con SMTP propio ya configurado, CAPTCHA activo y política de signup público.
+- Endurecimiento remoto de Auth para staging/producción: rate limits revisados con SMTP propio ya configurado, CAPTCHA activo, Google OAuth activo y política de signup público.
 - Extender Presence y resolución de conflictos a cronogramas cuando se vuelvan persistentes.
 - Conexión productiva completa para cronogramas, reportes y módulos pendientes.
 - Backups y recuperación.
@@ -105,14 +105,14 @@ Estos pasos no se ejecutan en el repo local. Son tareas de configuración en el 
 
 - [x] **Site URL**: seteado al dominio público de Vercel (`https://cyp-sistema-costos-presupuestos.vercel.app`).
 - [x] **Additional Redirect URLs**: agregados `https://cyp-sistema-costos-presupuestos.vercel.app` y `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback`.
-- [x] **OAuth callback**: `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback` queda permitido en Supabase Auth para cuando se habilite Google OAuth.
+- [x] **OAuth callback**: `https://cyp-sistema-costos-presupuestos.vercel.app/auth/callback` queda permitido en Supabase Auth.
 - [x] **`NEXT_PUBLIC_APP_URL`** en Vercel: seteado a `https://cyp-sistema-costos-presupuestos.vercel.app` para producción.
 
 ### Google OAuth
 
-- [ ] **Supabase Auth Provider Google**: habilitar Google en el dashboard remoto con Client ID y Client Secret.
-- [ ] **Google Cloud Authorized redirect URI**: agregar el callback de Supabase Auth (`https://<project-ref>.supabase.co/auth/v1/callback`) o el equivalente del proyecto remoto.
-- [ ] **Google Cloud Authorized JavaScript origins**: agregar el dominio público de Vercel y, si se prueba local, `http://127.0.0.1:3000`.
+- [x] **Supabase Auth Provider Google**: habilitado en el dashboard remoto con Client ID y Client Secret.
+- [x] **Google Cloud Authorized redirect URI**: agregado `https://qrzyltggvixlsowxepxh.supabase.co/auth/v1/callback`.
+- [x] **Google Cloud Authorized JavaScript origins**: agregado el dominio público de Vercel.
 - [ ] **Local opcional**: para Supabase CLI, setear `GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET`, habilitar `[auth.external.google]` y reiniciar/resetear Supabase local.
 
 ### Confirmación de email y SMTP

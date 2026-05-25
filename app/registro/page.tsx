@@ -94,7 +94,7 @@ export default function RegistroPage() {
 
   return (
     <AuthPanel
-      subtitle="Crea tu cuenta y luego registra la primera organización y proyecto de trabajo."
+      subtitle="Crea tu cuenta y luego completa tu perfil para entrar al dashboard."
       title="Crear cuenta"
     >
       <form className="space-y-4" onSubmit={handleSubmit}>

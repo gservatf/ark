@@ -1,6 +1,6 @@
 # Avances, Pendientes y Goals
 
-Última actualización: 2026-05-23.
+Última actualización: 2026-05-25.
 
 Este documento es el tablero vivo del MVP persistente colaborativo. El roadmap general está en [Roadmap MVP](04-roadmap-mvp.md); aquí se registra qué ya está hecho, qué falta y cuáles son los próximos prompts `/goal` para avanzar por etapas. El backlog posterior al MVP vive en [Post-MVP, feature complete y goals](10-post-mvp-goals.md).
 
@@ -36,7 +36,7 @@ Seguir todos los goals de este documento debe llevar a un MVP completo y colabor
 - Tailwind CSS configurado.
 - `lucide-react`, `zod`, `vitest`, `xlsx` y `@supabase/supabase-js` instalados.
 - Dashboard `/` conectado a Supabase con proyectos accesibles por RLS, versión oficial vigente o borrador activo y enlace a detalle.
-- Creación de proyectos nuevos conectada a Supabase desde dashboard y topbar mediante `create_project_with_current_member`; al crear, navega a `/presupuestos/[proyectoId]`.
+- Creación de proyectos nuevos conectada a Supabase desde dashboard y topbar mediante `create_project_with_current_member`; al crear, navega a `/presupuestos/[proyectoId]`. El dashboard vacío muestra un CTA principal para crear el primer proyecto.
 - Topbar conectado a proyectos reales con selector funcional, búsqueda global navegable y campanita de actividad persistente; se eliminó el botón de correo deshabilitado.
 - Módulo `/reportes` conectado a Supabase con resumen por presupuesto/proyecto, costos por grupo APU, recursos más costosos, totales por estado y distinción visible entre versión oficial y borrador activo.
 - Dashboard y flujo persistente inicial de `/presupuestos` implementados.
@@ -92,13 +92,14 @@ Seguir todos los goals de este documento debe llevar a un MVP completo y colabor
 - Deploy inicial 2026-05-22: GitHub quedó conectado a Vercel, proyecto Vercel `diego-polacks-projects/cyp-sistema-costos-presupuestos` publicado en `https://cyp-sistema-costos-presupuestos.vercel.app`, Supabase remoto `qrzyltggvixlsowxepxh` enlazado, 18 migraciones aplicadas, `supabase/seed.sql` cargado y variables públicas de producción configuradas en Vercel.
 - Hardening remoto inicial 2026-05-23: Supabase Auth remoto quedó con Site URL/Redirect URLs de Vercel, confirmación de email, SMTP Resend para `polacklabs.com`, contraseña mínima de 12 caracteres, requisito de minúscula/mayúscula/número, reautenticación para cambio de clave, Cloudflare Turnstile activo, Realtime público desactivado y SSL enforcement externo.
 - Recuperación de contraseña 2026-05-25: el email de reset ahora redirige por `/auth/callback?next=/actualizar-clave`, reutilizando la URL autorizada en Supabase para crear la sesión temporal antes de cambiar contraseña. El middleware permite `/actualizar-clave` con sesión activa para no mandar el reset al dashboard, y el dashboard muestra un toast de confirmación cuando el cambio se guarda.
+- Onboarding 2026-05-25: la primera experiencia ya no pide organización/RUC/proyecto. Pide nombre y apellido, guarda el perfil visible, crea una organización vacía automática para ownership/RLS y manda al dashboard; si no hay proyectos, el dashboard muestra un CTA para crear el primero.
 
 ## Pendientes principales
 
 - Mantener ajustes responsive finos según feedback real y futuros módulos persistentes.
 - Ampliar validaciones de presupuestos si el formulario crece.
 - Refinar recalculo colaborativo para partidas/APU y presupuestos según feedback real multiusuario.
-- Mantener Auth/RLS como base obligatoria; antes de usuarios reales configurar Google OAuth si aplica, definir backups/monitoreo y ejecutar pruebas multiusuario.
+- Mantener Auth/RLS como base obligatoria; antes de usuarios reales definir backups/monitoreo y ejecutar pruebas multiusuario.
 - Extender pruebas UI end-to-end para Presence y conflictos optimistas.
 - Migrar cronogramas mock a persistencia real cuando existan borradores/versiones colaborativas.
 - Evaluar selector de versiones oficiales históricas y exportación de cronogramas cuando pasen a persistencia.
@@ -121,7 +122,7 @@ Seguir todos los goals de este documento debe llevar a un MVP completo y colabor
 | CRUD persistente de partidas/APU | Resuelta base | Listado y builder APU usan Supabase con validaciones Zod, snapshots, parciales calculados y auditoría | Recalculo colaborativo y conflictos optimistas futuros | `/partidas`, `/partidas/[id]`, `lib/data/items.ts` |
 | Presupuestos con borrador y versiones | Resuelta base | `/presupuestos` usa borrador persistente multi-proyecto, refresca precios vigentes, fija precios y emite versiones oficiales congeladas | Pulir conflictos optimistas y colaboración realtime | `/`, `/presupuestos`, tablas snapshot, versiones |
 | Cronogramas mock | Resuelta para MVP mock | `/cronogramas` existe con estado frontend y cálculos puros testeados | Persistir cronogramas cuando presupuestos migren a borradores colaborativos y versiones oficiales | `/cronogramas`, `lib/calculations/schedule.ts` |
-| Auth, RLS y ownership | Resuelta base productiva | Supabase Auth email/password, SMTP Resend, confirmación de email remota, CAPTCHA Turnstile, OAuth Google opcional, callback `/auth/callback`, onboarding mínimo, roles y policies RLS implementados y testeados | Configurar Google OAuth si aplica; administrar miembros desde UI en goal posterior | `supabase/migrations/`, `supabase/tests/rls.sql`, `app/login`, `app/auth/callback`, `app/onboarding`, `docs/08-produccion.md` |
+| Auth, RLS y ownership | Resuelta base productiva | Supabase Auth email/password, SMTP Resend, confirmación de email remota, CAPTCHA Turnstile, OAuth Google, callback `/auth/callback`, onboarding de perfil con workspace vacío automático, roles y policies RLS implementados y testeados | Administrar miembros desde UI en goal posterior | `supabase/migrations/`, `supabase/tests/rls.sql`, `app/login`, `app/auth/callback`, `app/onboarding`, `docs/08-produccion.md` |
 | Realtime colaborativo | Resuelta avanzada | Broadcast privado desde auditoria persistida con toasts accesibles, invalidacion/refetch solo para eventos externos, Presence con identidad confiable y conflictos optimistas | Extender a cronogramas persistentes y agregar E2E | `lib/realtime/`, canales Supabase, UI de toasts/presencia |
 | Reportes simples | Resuelta MVP | `/reportes` existe como módulo de lectura conectado a Supabase y prioriza la versión oficial más reciente con fallback a borrador activo | Mejoras futuras de plantillas/reportes avanzados si aplica | `/reportes`, `lib/data/reports.ts` |
 | Exportaciones finales | Media | Excel/PDF interno y exportación cliente desde versión oficial existen con pruebas | Mejorar plantilla final y anexos APU si aplica | `lib/exports/budget.ts`, `docs/07-exportaciones.md` |

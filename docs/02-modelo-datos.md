@@ -18,6 +18,7 @@ El modelo de datos está documentado y preparado en SQL. La UI ya lo usa como ba
 - La integridad transaccional de presupuestos vive en `supabase/migrations/20260520150000_budget_integrity_transactions.sql`: agrega RPCs para emitir versiones oficiales y agregar partidas, endurece trazabilidad de borradores, bloquea cambios de organización en proyectos y valida auditoría/onboarding.
 - El hardening de producción web/Auth vive en `supabase/migrations/20260520164133_chunk3_auth_web_security_hardening.sql`: ajusta `set_updated_at`, reemplaza grants globales por grants explícitos y limita payloads de auditoría.
 - La creación de proyectos post-onboarding vive en `supabase/migrations/20260522165506_create_project_activity_center.sql`: agrega `create_project_with_current_member`, registra auditoría `proyecto` y habilita el centro de actividad persistente.
+- El onboarding personal vive en `supabase/migrations/20260525090532_onboarding_profile_workspace.sql`: agrega `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar el nombre visible del usuario y crear una organización vacía sin proyecto inicial.
 
 ## Contratos de capa de datos
 
@@ -74,7 +75,9 @@ Reglas actuales:
 
 El modelo colaborativo ya tiene RLS productivo activado sobre todas las tablas públicas. `anon` no tiene acceso por policies; `authenticated` solo puede consultar o escribir dentro de organizaciones/proyectos donde tenga membresía activa. Las funciones `security definer` `is_organization_member`, `is_organization_admin`, `is_project_member`, `is_project_admin`, `can_read_project`, `can_edit_project`, `can_emit_project` y `project_belongs_to_organization` centralizan las reglas para evitar acceso cruzado y recursión de policies.
 
-El onboarding usa la RPC `create_organization_with_owner(nombre_org, ruc_org, nombre_proyecto, cliente, ubicacion)` para crear de forma atómica una organización, su primer proyecto, el miembro `owner` de organización y el miembro `admin` de proyecto para el usuario autenticado.
+El onboarding nuevo usa la RPC `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar `user_profiles.display_name` y crear automáticamente una organización vacía con el usuario como `owner`. No crea proyecto inicial; el dashboard vacío muestra una llamada a crear el primer proyecto.
+
+La RPC legacy `create_organization_with_owner(nombre_org, ruc_org, nombre_proyecto, cliente, ubicacion)` queda disponible para compatibilidad, pero ya no es el flujo principal de onboarding.
 
 La RPC de onboarding rechaza usuarios que ya tienen una membresía activa y valida que el RUC, cuando existe, cumpla `^[0-9]{11}$` antes de insertar.
 

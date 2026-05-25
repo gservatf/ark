@@ -1,7 +1,8 @@
 "use client";
 
+import { UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Button } from "@/components/shared/Button";
@@ -9,18 +10,14 @@ import { createBrowserClient } from "@/lib/supabase/browser";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [organizationName, setOrganizationName] = useState("");
-  const [ruc, setRuc] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [client, setClient] = useState("");
-  const [location, setLocation] = useState("");
+  const supabase = useMemo(() => createBrowserClient(), []);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const supabase = createBrowserClient();
-
     async function checkWorkspace() {
       const { data } = await supabase
         .from("organizacion_miembros")
@@ -39,26 +36,28 @@ export default function OnboardingPage() {
     }
 
     void checkWorkspace();
-  }, [router]);
+  }, [router, supabase]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Ingresa tu nombre y apellido para continuar.");
+      return;
+    }
+
     setIsLoading(true);
 
-    const supabase = createBrowserClient();
-    const { error: rpcError } = await supabase.rpc("create_organization_with_owner", {
-      cliente: client || undefined,
-      nombre_org: organizationName,
-      nombre_proyecto: projectName,
-      ruc_org: ruc,
-      ubicacion: location || undefined
+    const { error: rpcError } = await supabase.rpc("complete_user_onboarding", {
+      apellido_usuario: lastName,
+      nombre_usuario: firstName
     });
 
     setIsLoading(false);
 
     if (rpcError) {
-      setError(rpcError.message || "No se pudo crear el espacio de trabajo.");
+      setError(rpcError.message || "No se pudo guardar tu perfil.");
       return;
     }
 
@@ -68,10 +67,7 @@ export default function OnboardingPage() {
 
   if (isChecking) {
     return (
-      <AuthPanel
-        subtitle="Estamos validando si tu cuenta ya tiene una organización activa."
-        title="Preparando acceso"
-      >
+      <AuthPanel subtitle="Estamos revisando si tu cuenta ya tiene un espacio de trabajo." title="Preparando acceso">
         <p className="text-sm text-slate-600">Un momento...</p>
       </AuthPanel>
     );
@@ -79,63 +75,41 @@ export default function OnboardingPage() {
 
   return (
     <AuthPanel
-      subtitle="Crea el espacio mínimo de ownership para que Supabase pueda aplicar permisos por organización y proyecto."
-      title="Configurar organización"
+      subtitle="Usaremos estos datos para identificarte en actividad, colaboracion y cambios del sistema."
+      title="Completa tu perfil"
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-brand-600">
+          <UserRound className="h-6 w-6" />
+        </span>
+
         <label className="block">
-          <span className="text-sm font-semibold text-slate-700">Organización</span>
+          <span className="text-sm font-semibold text-slate-700">Nombre</span>
           <input
+            autoComplete="given-name"
             className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100"
-            onChange={(event) => setOrganizationName(event.target.value)}
+            maxLength={80}
+            onChange={(event) => setFirstName(event.target.value)}
             required
-            value={organizationName}
+            value={firstName}
           />
         </label>
         <label className="block">
-          <span className="text-sm font-semibold text-slate-700">RUC</span>
+          <span className="text-sm font-semibold text-slate-700">Apellido</span>
           <input
+            autoComplete="family-name"
             className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100"
-            maxLength={11}
-            onChange={(event) => setRuc(event.target.value)}
-            placeholder="Opcional"
-            value={ruc}
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm font-semibold text-slate-700">Proyecto inicial</span>
-          <input
-            className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100"
-            onChange={(event) => setProjectName(event.target.value)}
+            maxLength={80}
+            onChange={(event) => setLastName(event.target.value)}
             required
-            value={projectName}
+            value={lastName}
           />
         </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Cliente</span>
-            <input
-              className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100"
-              onChange={(event) => setClient(event.target.value)}
-              placeholder="Opcional"
-              value={client}
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Ubicación</span>
-            <input
-              className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100"
-              onChange={(event) => setLocation(event.target.value)}
-              placeholder="Opcional"
-              value={location}
-            />
-          </label>
-        </div>
 
         {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
 
         <Button className="w-full justify-center" disabled={isLoading} type="submit">
-          {isLoading ? "Creando..." : "Crear espacio de trabajo"}
+          {isLoading ? "Guardando..." : "Continuar al dashboard"}
         </Button>
       </form>
     </AuthPanel>

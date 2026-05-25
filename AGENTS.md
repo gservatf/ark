@@ -36,7 +36,7 @@ Recursos -> Partidas/APU -> Presupuestos -> Cronogramas -> Reportes
 - Supabase local-first configurado con `supabase/config.toml`, `.env.local` local ignorado, scripts pnpm, migraciones, seed y tipos generados desde la base local.
 - Ya hay conexión real de UI a Supabase para proveedores, recursos, cotizaciones, partidas/APU y presupuestos; todavía faltan cronogramas persistentes.
 - Realtime colaborativo implementado con Broadcast privado desde `activity_events`, Presence efímero y resolución optimista de conflictos con `updated_at`.
-- Primer deploy productivo controlado realizado en Vercel + Supabase remoto: GitHub conectado a Vercel, Supabase remoto enlazado, migraciones/seed aplicados, variables públicas configuradas, Site URL/Redirect URLs de Auth, confirmación de email, SMTP con Resend, CAPTCHA con Cloudflare Turnstile, reglas fuertes de contraseña, Realtime público desactivado y SSL enforcement remoto aplicados. Todavía quedan checklists remotos para Google OAuth si aplica, backups y pruebas multiusuario antes de usuarios reales.
+- Primer deploy productivo controlado realizado en Vercel + Supabase remoto: GitHub conectado a Vercel, Supabase remoto enlazado, migraciones/seed aplicados, variables públicas configuradas, Site URL/Redirect URLs de Auth, confirmación de email, SMTP con Resend, CAPTCHA con Cloudflare Turnstile, Google OAuth, reglas fuertes de contraseña, Realtime público desactivado y SSL enforcement remoto aplicados. Todavía quedan checklists remotos para backups y pruebas multiusuario antes de usuarios reales.
 
 ## Stack oficial
 

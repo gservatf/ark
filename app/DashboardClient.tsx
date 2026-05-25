@@ -220,13 +220,15 @@ export default function HomePage() {
                 <BarChart3 className="h-4 w-4" />
                 Ver reportes
               </Link>
-              <Link
-                className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-brand-700"
-                href={projects[0] ? `/presupuestos/${projects[0].id}` : "/presupuestos"}
-              >
-                Abrir presupuestos
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              {projects[0] ? (
+                <Link
+                  className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-brand-700"
+                  href={`/presupuestos/${projects[0].id}`}
+                >
+                  Abrir presupuestos
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              ) : null}
             </>
           }
           description="Vista persistente de proyectos: muestra la última versión oficial o, si todavía no existe, el borrador activo."
@@ -264,7 +266,17 @@ export default function HomePage() {
         <DataTable
           actions={<Button className="h-9 px-3" icon={RefreshCcw} onClick={() => void loadData()} variant="secondary">Recargar</Button>}
           description="Cada fila resume el estado economico del presupuesto vigente del proyecto."
-          emptyState={<EmptyState description="Crea o solicita acceso a un proyecto para empezar." title="No hay proyectos accesibles" />}
+          emptyState={
+            <EmptyState
+              action={
+                <Button icon={Plus} onClick={() => setIsCreateProjectOpen(true)}>
+                  Crear nuevo proyecto
+                </Button>
+              }
+              description="Tu espacio de trabajo esta listo. Crea el primer proyecto para empezar a armar presupuestos."
+              title="Todavia no tienes proyectos"
+            />
+          }
           isEmpty={projects.length === 0}
           minWidth={880}
           title="Dashboard de proyectos"

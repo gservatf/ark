@@ -1616,6 +1616,14 @@ export type Database = {
           proyecto_miembro_id: string
         }[]
       }
+      complete_user_onboarding: {
+        Args: { apellido_usuario: string; nombre_usuario: string }
+        Returns: {
+          organizacion_id: string
+          organizacion_miembro_id: string
+          user_id: string
+        }[]
+      }
       create_project_with_current_member: {
         Args: { cliente?: string; nombre_proyecto: string; ubicacion?: string }
         Returns: {
@@ -1843,4 +1851,3 @@ export const Constants = {
     },
   },
 } as const
-

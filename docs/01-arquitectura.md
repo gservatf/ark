@@ -170,6 +170,7 @@ La resolución de conflictos vive en `lib/data/`. Las mutaciones editables recib
 - Existe migración preventiva `supabase/migrations/20260521155627_chunk7_refactor_hardening.sql` que re-declara la RPC de onboarding con `actor_id` y `set search_path = ''`.
 - Existe migración `20260521172537_presence_dedicated_topics.sql` que autoriza topics dedicados de Presence (`presence:org:*`, `presence:project:*`) y evita que Realtime reutilice el canal Broadcast ya suscrito para el mismo proyecto/organización.
 - Existe migración `20260522165506_create_project_activity_center.sql` con RPC transaccional para crear proyectos adicionales, membresía admin del creador y auditoría `entity_type = 'proyecto'`.
+- Existe migración `20260525090532_onboarding_profile_workspace.sql` para que onboarding guarde nombre/apellido, actualice `user_profiles.display_name` y cree una organización vacía de ownership sin forzar proyecto inicial.
 - Los tipos de Supabase en `lib/supabase/types.ts` se generaron desde la base local con `pnpm run supabase:types`.
 - Las migraciones y `supabase/seed.sql` fueron validadas con `pnpm run supabase:reset` en Supabase local.
 - Existe capa base en `lib/data/` para proveedores, recursos, cotizaciones, partidas/APU, proyectos, actividad y presupuestos. La UI ya consulta y persiste estos módulos en Supabase; cronogramas sigue pendiente de persistencia.
