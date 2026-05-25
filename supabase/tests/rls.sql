@@ -201,6 +201,19 @@ select lives_ok(
 );
 select lives_ok(
   $$
+    select public.delete_provider_for_current_user(
+      (
+        select id
+        from public.proveedores
+        where nombre = 'Proveedor creado por admin proyecto'
+        limit 1
+      )
+    )
+  $$,
+  'admin de proyecto elimina proveedor sin vinculos protegidos'
+);
+select lives_ok(
+  $$
     insert into public.recursos (
       organizacion_id,
       nombre,

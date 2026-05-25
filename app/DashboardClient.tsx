@@ -99,6 +99,22 @@ export default function HomePage() {
     router.replace(nextSearch ? `${pathname}?${nextSearch}` : pathname, { scroll: false });
   }, [pathname, router]);
 
+  useEffect(() => {
+    if (localToasts.length === 0) {
+      return undefined;
+    }
+
+    const timers = localToasts.map((toast) =>
+      window.setTimeout(() => {
+        setLocalToasts((current) => current.filter((item) => item.id !== toast.id));
+      }, 5000)
+    );
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [localToasts]);
+
   const activityTopic = useMemo(
     () => (scope ? { organizacionId: scope.organizacionId, type: "org" as const } : undefined),
     [scope]

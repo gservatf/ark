@@ -1820,6 +1820,30 @@ export type Database = {
       }
       current_user_id: { Args: never; Returns: string }
       current_verified_email: { Args: never; Returns: string }
+      delete_provider_for_current_user: {
+        Args: { p_provider_id: string }
+        Returns: {
+          contacto: string | null
+          created_at: string
+          direccion: string | null
+          disponible_para_cliente: boolean
+          email: string | null
+          estado: Database["public"]["Enums"]["estado_registro"]
+          id: string
+          nombre: string
+          notas: string | null
+          organizacion_id: string | null
+          ruc: string | null
+          telefono: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proveedores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       emit_official_budget_version: {
         Args: { p_draft_id: string; p_expected_updated_at: string }
         Returns: Json

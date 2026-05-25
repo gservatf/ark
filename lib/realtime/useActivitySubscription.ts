@@ -40,6 +40,7 @@ export function useActivitySubscription({
   const dedupe = useMemo(() => createActivityEventDedupe(), []);
   const onRefetchRef = useRef(onRefetch);
   const filterRef = useRef(filter);
+  const toastTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(() => {
     onRefetchRef.current = onRefetch;
@@ -89,13 +90,25 @@ export function useActivitySubscription({
           }
 
           const toast = getActivityToastMessage(payload);
+          const toastId = payload.activityEventId;
           setToasts((current) => [
             ...current.slice(-2),
             {
               ...toast,
-              id: payload.activityEventId
+              id: toastId
             }
           ]);
+          const existingToastTimer = toastTimersRef.current.get(toastId);
+
+          if (existingToastTimer) {
+            clearTimeout(existingToastTimer);
+          }
+
+          const toastTimer = setTimeout(() => {
+            toastTimersRef.current.delete(toastId);
+            setToasts((current) => current.filter((item) => item.id !== toastId));
+          }, 5000);
+          toastTimersRef.current.set(toastId, toastTimer);
 
           if (refetchTimer) {
             clearTimeout(refetchTimer);
@@ -132,8 +145,26 @@ export function useActivitySubscription({
     };
   }, [currentActorId, debounceMs, dedupe, enabled, topicScope]);
 
+  useEffect(() => {
+    const toastTimers = toastTimersRef.current;
+
+    return () => {
+      toastTimers.forEach((timer) => clearTimeout(timer));
+      toastTimers.clear();
+    };
+  }, []);
+
   return {
-    dismissToast: (id: string) => setToasts((current) => current.filter((toast) => toast.id !== id)),
+    dismissToast: (id: string) => {
+      const timer = toastTimersRef.current.get(id);
+
+      if (timer) {
+        clearTimeout(timer);
+        toastTimersRef.current.delete(id);
+      }
+
+      setToasts((current) => current.filter((toast) => toast.id !== id));
+    },
     status,
     toasts
   };

@@ -261,6 +261,7 @@ Reglas UX:
 - `/configuracion/organizaciones` queda enlazado desde el menu de perfil y permite crear organizaciones de empresa, revisar organizaciones disponibles, invitar colaboradores con proyecto opcional y aceptar/rechazar invitaciones recibidas.
 - La misma pantalla incluye `Miembros y permisos`: owners/admins ven miembros con nombre y correo, despliegan cada miembro, revisan proyectos accesibles y editan rol de organizacion, acceso a todos/futuros proyectos, rol por defecto y roles especificos por proyecto.
 - Los admins de proyecto ven habilitadas las acciones de catalogo operativo necesarias para trabajar: crear/editar proveedores, recursos, cotizaciones, partidas y APU. La UI sigue reservando invitaciones, creacion de proyectos y matriz de permisos para admins de organizacion.
+- En proveedores, activar/desactivar y eliminar son acciones separadas. Eliminar usa confirmacion propia y puede fallar si existen historicos que deban conservarse.
 - Las invitaciones usan seleccion multiple de proyectos con checkboxes y una casilla para incluir automaticamente al usuario en proyectos futuros.
 - El campo de correos de invitacion acepta uno o varios correos separados por espacios, comas o saltos de linea, aplicando las mismas propiedades de acceso a todos.
 - Si el rol de organizacion es `Admin`, la UI marca todos los proyectos, activa futuros proyectos y bloquea esas opciones; el rol de proyecto queda como `Admin`.

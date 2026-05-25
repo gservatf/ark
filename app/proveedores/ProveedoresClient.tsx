@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDeleteProviderDialog } from "@/components/proveedores/ConfirmDeleteProviderDialog";
+import { ConfirmProviderStatusDialog } from "@/components/proveedores/ConfirmProviderStatusDialog";
 import {
   ProviderFilters,
   type ProviderFiltersValue
@@ -24,8 +25,10 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { PresenceBar } from "@/components/shared/PresenceBar";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import {
+  activateProvider,
   createProvider,
   deactivateProvider,
+  deleteProvider,
   listProviders,
   updateProvider
 } from "@/lib/data/providers";
@@ -76,7 +79,8 @@ export default function ProveedoresPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState<string | undefined>();
-  const [deactivateTarget, setDeactivateTarget] = useState<Proveedor | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<Proveedor | undefined>();
+  const [statusTarget, setStatusTarget] = useState<Proveedor | undefined>();
   const [showForm, setShowForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -308,19 +312,27 @@ export default function ProveedoresPage() {
     setFormErrors({});
   }
 
-  async function confirmDeactivate() {
-    if (!deactivateTarget || !workspace) {
+  async function confirmToggleStatus() {
+    if (!statusTarget || !workspace) {
       return;
     }
 
     setIsSaving(true);
     setMutationError(null);
 
-    const result = await deactivateProvider(createBrowserClient(), workspace.scope, deactivateTarget.id, {
-      attempted: { estado: "inactivo" },
-      base: deactivateTarget,
-      expectedUpdatedAt: deactivateTarget.updated_at
-    });
+    const nextStatus = statusTarget.estado === "activo" ? "inactivo" : "activo";
+    const result =
+      nextStatus === "activo"
+        ? await activateProvider(createBrowserClient(), workspace.scope, statusTarget.id, {
+            attempted: { estado: nextStatus },
+            base: statusTarget,
+            expectedUpdatedAt: statusTarget.updated_at
+          })
+        : await deactivateProvider(createBrowserClient(), workspace.scope, statusTarget.id, {
+            attempted: { estado: nextStatus },
+            base: statusTarget,
+            expectedUpdatedAt: statusTarget.updated_at
+          });
 
     setIsSaving(false);
 
@@ -328,7 +340,7 @@ export default function ProveedoresPage() {
       if (isOptimisticConflict(result.error)) {
         setConflict({
           error: result.error,
-          retry: () => retryProviderDeactivate(deactivateTarget, result.error)
+          retry: () => retryProviderStatus(statusTarget, result.error)
         });
       }
       setMutationError(errorMessage(result.error));
@@ -339,7 +351,30 @@ export default function ProveedoresPage() {
       current.map((provider) => (provider.id === result.data.id ? result.data : provider))
     );
     setSelectedProviderId(result.data.id);
-    setDeactivateTarget(undefined);
+    setStatusTarget(undefined);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || !workspace) {
+      return;
+    }
+
+    setIsSaving(true);
+    setMutationError(null);
+
+    const result = await deleteProvider(createBrowserClient(), workspace.scope, deleteTarget.id);
+    setIsSaving(false);
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return;
+    }
+
+    setProviders((current) => current.filter((provider) => provider.id !== result.data.id));
+    setSelectedProviderId((current) =>
+      current === result.data.id ? providers.find((provider) => provider.id !== result.data.id)?.id : current
+    );
+    setDeleteTarget(undefined);
   }
 
   async function retryProviderUpdate(providerId: string, input: ProveedorInput, error: DataError) {
@@ -374,7 +409,7 @@ export default function ProveedoresPage() {
     setFormErrors({});
   }
 
-  async function retryProviderDeactivate(provider: Proveedor, error: DataError) {
+  async function retryProviderStatus(provider: Proveedor, error: DataError) {
     if (!workspace) {
       return;
     }
@@ -388,11 +423,19 @@ export default function ProveedoresPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await deactivateProvider(createBrowserClient(), workspace.scope, provider.id, {
-      attempted: { estado: "inactivo" },
-      base: provider,
-      expectedUpdatedAt
-    });
+    const nextStatus = provider.estado === "activo" ? "inactivo" : "activo";
+    const result =
+      nextStatus === "activo"
+        ? await activateProvider(createBrowserClient(), workspace.scope, provider.id, {
+            attempted: { estado: nextStatus },
+            base: provider,
+            expectedUpdatedAt
+          })
+        : await deactivateProvider(createBrowserClient(), workspace.scope, provider.id, {
+            attempted: { estado: nextStatus },
+            base: provider,
+            expectedUpdatedAt
+          });
     setIsSaving(false);
 
     if (!result.ok) {
@@ -402,7 +445,7 @@ export default function ProveedoresPage() {
 
     setProviders((current) => current.map((item) => (item.id === result.data.id ? result.data : item)));
     setSelectedProviderId(result.data.id);
-    setDeactivateTarget(undefined);
+    setStatusTarget(undefined);
   }
 
   const emptyMessage =
@@ -418,7 +461,8 @@ export default function ProveedoresPage() {
           setConflict(null);
           setShowForm(false);
           setEditingId(null);
-          setDeactivateTarget(undefined);
+          setDeleteTarget(undefined);
+          setStatusTarget(undefined);
           void loadData();
         }}
         onOverwrite={() => {
@@ -505,9 +549,10 @@ export default function ProveedoresPage() {
               <ProviderTable
                 canMutate={Boolean(workspace?.canMutate)}
                 emptyMessage={emptyMessage}
-                onDeactivate={setDeactivateTarget}
+                onDelete={setDeleteTarget}
                 onEdit={openEditForm}
                 onSelect={(provider) => setSelectedProviderId(provider.id)}
+                onToggleStatus={setStatusTarget}
                 providers={filteredProviders}
                 resourceCounts={resourceCounts}
                 selectedProviderId={selectedProviderId}
@@ -535,10 +580,15 @@ export default function ProveedoresPage() {
       </div>
 
       <ConfirmDeleteProviderDialog
-        onCancel={() => setDeactivateTarget(undefined)}
-        onConfirm={confirmDeactivate}
-        provider={deactivateTarget}
-        resourceCount={deactivateTarget ? resourceCounts.get(deactivateTarget.id) || 0 : 0}
+        onCancel={() => setDeleteTarget(undefined)}
+        onConfirm={confirmDelete}
+        provider={deleteTarget}
+        resourceCount={deleteTarget ? resourceCounts.get(deleteTarget.id) || 0 : 0}
+      />
+      <ConfirmProviderStatusDialog
+        onCancel={() => setStatusTarget(undefined)}
+        onConfirm={confirmToggleStatus}
+        provider={statusTarget}
       />
     </AppLayout>
   );

@@ -196,7 +196,34 @@ export async function deleteProvider(
   scope: DataScope,
   providerId: string
 ): Promise<DataResult<Proveedor>> {
-  return deactivateProvider(client, scope, providerId);
+  const scopeResult = validateDataScope(scope, { requireActor: true });
+
+  if (!scopeResult.ok) {
+    return scopeResult;
+  }
+
+  if (!providerId.trim()) {
+    return dataFailure(notFoundError());
+  }
+
+  const { data, error } = await client.rpc("delete_provider_for_current_user", {
+    p_provider_id: providerId
+  });
+
+  if (error) {
+    return dataFailure(normalizeSupabaseError(error, "proveedores.delete"));
+  }
+
+  return dataSuccess(data as Proveedor);
+}
+
+export async function activateProvider(
+  client: DataClient,
+  scope: DataScope,
+  providerId: string,
+  options: OptimisticMutationOptions<Proveedor, { estado: "activo" }> = {}
+): Promise<DataResult<Proveedor>> {
+  return setProviderStatus(client, scope, providerId, "activo", options);
 }
 
 export async function deactivateProvider(
@@ -204,6 +231,16 @@ export async function deactivateProvider(
   scope: DataScope,
   providerId: string,
   options: OptimisticMutationOptions<Proveedor, { estado: "inactivo" }> = {}
+): Promise<DataResult<Proveedor>> {
+  return setProviderStatus(client, scope, providerId, "inactivo", options);
+}
+
+async function setProviderStatus(
+  client: DataClient,
+  scope: DataScope,
+  providerId: string,
+  estado: "activo" | "inactivo",
+  options: OptimisticMutationOptions<Proveedor, { estado: "activo" | "inactivo" }> = {}
 ): Promise<DataResult<Proveedor>> {
   const scopeResult = validateDataScope(scope, { requireActor: true });
 
@@ -220,7 +257,7 @@ export async function deactivateProvider(
   const expectedUpdatedAt = getExpectedUpdatedAt(currentResult.data, options);
   const { data, error } = await client
     .from("proveedores")
-    .update({ estado: "inactivo" })
+    .update({ estado })
     .eq("organizacion_id", scopeResult.data.organizacionId)
     .eq("id", providerId)
     .eq("updated_at", expectedUpdatedAt)
@@ -232,16 +269,16 @@ export async function deactivateProvider(
   }
 
   if (!data) {
-    return conflictFailureFromLatest<Proveedor, { estado: "inactivo" }>(client, "proveedores", providerId, expectedUpdatedAt, {
-      attempted: options.attempted || { estado: "inactivo" },
+    return conflictFailureFromLatest<Proveedor, { estado: "activo" | "inactivo" }>(client, "proveedores", providerId, expectedUpdatedAt, {
+      attempted: options.attempted || { estado },
       base: options.base || currentResult.data,
       entityLabel: "El proveedor",
-      source: "proveedores.deactivate"
+      source: "proveedores.status"
     });
   }
 
   const auditResult = await insertActivityEvent(client, {
-    action: "deactivate",
+    action: estado === "activo" ? "activate" : "deactivate",
     after: data,
     before: currentResult.data,
     changedFields: getChangedFields(currentResult.data, data),
@@ -259,6 +296,7 @@ export async function deactivateProvider(
 }
 
 export const providersRepository = {
+  activateProvider,
   createProvider,
   deactivateProvider,
   deleteProvider,

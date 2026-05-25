@@ -1,12 +1,13 @@
 import { Trash2 } from "lucide-react";
+
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import type { Proveedor } from "@/types/domain";
 
 type ConfirmDeleteProviderDialogProps = {
-  provider?: Proveedor;
-  resourceCount: number;
   onCancel: () => void;
   onConfirm: () => void;
+  provider?: Proveedor;
+  resourceCount: number;
 };
 
 export function ConfirmDeleteProviderDialog({
@@ -23,17 +24,18 @@ export function ConfirmDeleteProviderDialog({
       onConfirm={onConfirm}
       open={Boolean(provider)}
       title="Eliminar proveedor"
-      tone="warning"
+      tone="danger"
     >
       {provider ? (
         <>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            El proveedor <strong className="text-slate-900">{provider.nombre}</strong> quedara
-            inactivo y podra seguir apareciendo en historicos y recursos ya vinculados.
+            El proveedor <strong className="text-slate-900">{provider.nombre}</strong> se quitara del
+            directorio si no tiene historicos o cotizaciones protegidas.
           </p>
           {resourceCount > 0 ? (
-            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium leading-6 text-amber-800">
-              Tiene {resourceCount} recursos vinculados. Esta acción no modifica esos recursos.
+            <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium leading-6 text-red-800">
+              Tiene {resourceCount} recursos vinculados. Si la base necesita conservar historicos,
+              usa Desactivar en lugar de Eliminar.
             </p>
           ) : null}
         </>

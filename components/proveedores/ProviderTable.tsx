@@ -9,10 +9,11 @@ import { formatDate, optionalText } from "@/components/proveedores/provider-ui";
 type ProviderTableProps = {
   canMutate: boolean;
   emptyMessage: string;
+  onDelete: (provider: Proveedor) => void;
   providers: Proveedor[];
   resourceCounts: Map<string, number>;
   selectedProviderId?: string;
-  onDeactivate: (provider: Proveedor) => void;
+  onToggleStatus: (provider: Proveedor) => void;
   onEdit: (provider: Proveedor) => void;
   onSelect: (provider: Proveedor) => void;
 };
@@ -20,9 +21,10 @@ type ProviderTableProps = {
 export function ProviderTable({
   canMutate,
   emptyMessage,
-  onDeactivate,
+  onDelete,
   onEdit,
   onSelect,
+  onToggleStatus,
   providers,
   resourceCounts,
   selectedProviderId
@@ -60,9 +62,10 @@ export function ProviderTable({
               <ProviderTableRow
                 canMutate={canMutate}
                 key={provider.id}
-                onDeactivate={onDeactivate}
+                onDelete={onDelete}
                 onEdit={onEdit}
                 onSelect={onSelect}
+                onToggleStatus={onToggleStatus}
                 provider={provider}
                 resourceCount={resourceCounts.get(provider.id) || 0}
                 selected={selectedProviderId === provider.id}
@@ -75,24 +78,27 @@ export function ProviderTable({
 
 const ProviderTableRow = memo(function ProviderTableRow({
   canMutate,
-  onDeactivate,
+  onDelete,
   onEdit,
   onSelect,
+  onToggleStatus,
   provider,
   resourceCount,
   selected
 }: {
   canMutate: boolean;
-  onDeactivate: (provider: Proveedor) => void;
+  onDelete: (provider: Proveedor) => void;
   onEdit: (provider: Proveedor) => void;
   onSelect: (provider: Proveedor) => void;
+  onToggleStatus: (provider: Proveedor) => void;
   provider: Proveedor;
   resourceCount: number;
   selected: boolean;
 }) {
   const handleSelect = useCallback(() => onSelect(provider), [onSelect, provider]);
   const handleEdit = useCallback(() => onEdit(provider), [onEdit, provider]);
-  const handleDeactivate = useCallback(() => onDeactivate(provider), [onDeactivate, provider]);
+  const handleDelete = useCallback(() => onDelete(provider), [onDelete, provider]);
+  const handleToggleStatus = useCallback(() => onToggleStatus(provider), [onToggleStatus, provider]);
 
   return (
     <tr
@@ -170,16 +176,22 @@ const ProviderTableRow = memo(function ProviderTableRow({
             onClick={handleEdit}
           />
           <IconAction
-            disabled={!canMutate || provider.estado === "inactivo"}
-            icon={Trash2}
+            disabled={!canMutate}
+            icon={provider.estado === "activo" ? PowerOff : Power}
             label={
               provider.estado === "inactivo"
-                ? `${provider.nombre} ya esta inactivo`
+                ? `Activar ${provider.nombre}`
                 : canMutate
-                  ? `Eliminar ${provider.nombre}`
-                  : "Solo admins de proyecto u organización pueden eliminar"
+                  ? `Desactivar ${provider.nombre}`
+                  : "Solo admins de proyecto u organización pueden cambiar estado"
             }
-            onClick={handleDeactivate}
+            onClick={handleToggleStatus}
+          />
+          <IconAction
+            disabled={!canMutate}
+            icon={Trash2}
+            label={canMutate ? `Eliminar ${provider.nombre}` : "Solo admins de proyecto u organización pueden eliminar"}
+            onClick={handleDelete}
           />
         </div>
       </td>

@@ -426,7 +426,8 @@ Notas: los modales compartidos tienen semantica/foco/teclado accesible; tablas a
 - Se agrego `can_manage_organization_catalog` para que un usuario con rol `Admin` en al menos un proyecto pueda gestionar proveedores, recursos, cotizaciones, partidas y APU de la organizacion.
 - Recursos, Proveedores, Partidas y detalle APU ahora habilitan acciones si el usuario es admin de proyecto u organizacion.
 - La policy de `activity_events` ahora permite auditoria de catalogo para admins de proyecto; esto evita el falso error post-guardado y vuelve a disparar broadcast realtime.
-- La accion visible de proveedores ahora usa `Eliminar` con icono de papelera, manteniendo eliminacion segura como inactivacion para preservar historicos.
+- Proveedores mantiene acciones separadas: activar/desactivar cambia estado, y eliminar intenta quitar fisicamente el proveedor solo si no hay historicos protegidos.
+- Los toasts de actividad se cierran automaticamente a los 5 segundos, ademas de permitir cierre manual.
 - La gestion de miembros, invitaciones y creacion de proyectos sigue limitada a owner/admin de organizacion.
-- RLS tests cubren que un admin de proyecto puede crear proveedor, recurso, partida y registrar auditoria de proveedor, mientras el lector vuelve a quedar sin ese permiso.
+- RLS tests cubren que un admin de proyecto puede crear/eliminar proveedor sin vinculos protegidos, crear recurso, crear partida y registrar auditoria de proveedor, mientras el lector vuelve a quedar sin ese permiso.
 - Verificacion: `pnpm run supabase:reset`, `pnpm run supabase:types`, `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test` y `pnpm build`.
