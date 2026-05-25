@@ -21,6 +21,7 @@ type UseActivitySubscriptionOptions = {
   debounceMs?: number;
   enabled?: boolean;
   filter?: (payload: ActivityRealtimePayload) => boolean;
+  onActivity?: (payload: ActivityRealtimePayload) => Promise<boolean> | boolean;
   onRefetch: () => Promise<void> | void;
   topicScope?: ActivityTopicScope;
 };
@@ -32,20 +33,23 @@ export function useActivitySubscription({
   debounceMs = 600,
   enabled = true,
   filter,
+  onActivity,
   onRefetch,
   topicScope
 }: UseActivitySubscriptionOptions) {
   const [toasts, setToasts] = useState<Array<ActivityToastMessage & { id: string }>>([]);
   const [status, setStatus] = useState<ActivityConnectionStatus>("idle");
   const dedupe = useMemo(() => createActivityEventDedupe(), []);
+  const onActivityRef = useRef(onActivity);
   const onRefetchRef = useRef(onRefetch);
   const filterRef = useRef(filter);
   const toastTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(() => {
+    onActivityRef.current = onActivity;
     onRefetchRef.current = onRefetch;
     filterRef.current = filter;
-  }, [filter, onRefetch]);
+  }, [filter, onActivity, onRefetch]);
 
   useEffect(() => {
     if (!enabled || !topicScope) {
@@ -59,6 +63,21 @@ export function useActivitySubscription({
     let channel: ReturnType<typeof supabase.channel> | undefined;
     let isCancelled = false;
     const unbindRealtimeAuth = bindRealtimeAuth(supabase);
+    const scheduleRefetch = () => {
+      if (isCancelled) {
+        return;
+      }
+
+      if (refetchTimer) {
+        clearTimeout(refetchTimer);
+      }
+
+      refetchTimer = setTimeout(() => {
+        if (!isCancelled) {
+          void onRefetchRef.current();
+        }
+      }, debounceMs);
+    };
 
     const setupChannel = async () => {
       if (isCancelled) {
@@ -110,13 +129,21 @@ export function useActivitySubscription({
           }, 5000);
           toastTimersRef.current.set(toastId, toastTimer);
 
-          if (refetchTimer) {
-            clearTimeout(refetchTimer);
-          }
+          const handleActivity = async () => {
+            try {
+              const handled = await onActivityRef.current?.(payload);
 
-          refetchTimer = setTimeout(() => {
-            void onRefetchRef.current();
-          }, debounceMs);
+              if (handled) {
+                return;
+              }
+            } catch {
+              // If the local patch fails, fall back to the conservative refetch path.
+            }
+
+            scheduleRefetch();
+          };
+
+          void handleActivity();
         });
 
       setStatus("connecting");

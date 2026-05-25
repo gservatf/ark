@@ -427,6 +427,7 @@ Notas: los modales compartidos tienen semantica/foco/teclado accesible; tablas a
 - Recursos, Proveedores, Partidas y detalle APU ahora habilitan acciones si el usuario es admin de proyecto u organizacion.
 - La policy de `activity_events` ahora permite auditoria de catalogo para admins de proyecto; esto evita el falso error post-guardado y vuelve a disparar broadcast realtime.
 - Proveedores mantiene acciones separadas: activar/desactivar cambia estado, y eliminar intenta quitar fisicamente el proveedor solo si no hay historicos protegidos.
+- Realtime en `/proveedores` aplica parches locales para eventos de proveedor externos: agrega, actualiza o quita solo la fila afectada y deja el refetch completo como fallback para eventos no cubiertos.
 - Los toasts de actividad se cierran automaticamente a los 5 segundos, ademas de permitir cierre manual.
 - La gestion de miembros, invitaciones y creacion de proyectos sigue limitada a owner/admin de organizacion.
 - RLS tests cubren que un admin de proyecto puede crear/eliminar proveedor sin vinculos protegidos, crear recurso, crear partida y registrar auditoria de proveedor, mientras el lector vuelve a quedar sin ese permiso.

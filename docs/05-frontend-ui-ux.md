@@ -235,6 +235,7 @@ Reglas UX:
 - No mostrar botones o links que parezcan funcionales si no ejecutan acciÃ³n. Conectar a una ruta real, deshabilitar con tooltip o convertir a texto informativo.
 - Usar `EmptyState`, `LoadingState` y `ConfirmDialog` compartidos cuando el comportamiento sea estÃ¡ndar.
 - Usar `ActivityToasts` para avisos realtime en dashboard, presupuestos, partidas/APU, recursos y proveedores.
+- En `/proveedores`, los cambios realtime de proveedores deben aplicarse como parches locales de fila para no mover scroll, filtros ni estado de carga; usar recarga completa solo como fallback.
 - Usar `DataTable` solo como contenedor visual de tablas; si una tabla necesita lÃ³gica avanzada futura, evaluar TanStack Table en ese goal.
 
 ## Responsive

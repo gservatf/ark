@@ -2,7 +2,7 @@
 
 import { Plus, RefreshCcw, WalletCards } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ConfirmDeleteProviderDialog } from "@/components/proveedores/ConfirmDeleteProviderDialog";
 import { ConfirmProviderStatusDialog } from "@/components/proveedores/ConfirmProviderStatusDialog";
@@ -29,6 +29,7 @@ import {
   createProvider,
   deactivateProvider,
   deleteProvider,
+  getProviderById,
   listProviders,
   updateProvider
 } from "@/lib/data/providers";
@@ -85,6 +86,8 @@ export default function ProveedoresPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [conflict, setConflict] = useState<{ error: DataError; retry: () => Promise<void> } | null>(null);
+  const editingIdRef = useRef<string | null>(null);
+  const providersRef = useRef<Proveedor[]>([]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -137,6 +140,14 @@ export default function ProveedoresPage() {
   }, [loadData]);
 
   useEffect(() => {
+    providersRef.current = providers;
+  }, [providers]);
+
+  useEffect(() => {
+    editingIdRef.current = editingId;
+  }, [editingId]);
+
+  useEffect(() => {
     const nextFilters = parseProviderFilters(searchParams);
     setFilters((current) =>
       providerFiltersEqual(current, nextFilters) ? current : nextFilters
@@ -164,10 +175,70 @@ export default function ProveedoresPage() {
     (payload: ActivityRealtimePayload) => ["proveedor", "recurso", "recurso_proveedor_precio"].includes(payload.entityType),
     []
   );
+  const removeProviderFromState = useCallback((providerId: string) => {
+    const nextSelectedId = providersRef.current.find((provider) => provider.id !== providerId)?.id;
+
+    setProviders((current) => current.filter((provider) => provider.id !== providerId));
+    setSelectedProviderId((current) => (current === providerId ? nextSelectedId : current));
+    setDeleteTarget((current) => (current?.id === providerId ? undefined : current));
+    setStatusTarget((current) => (current?.id === providerId ? undefined : current));
+    setEditingId((current) => (current === providerId ? null : current));
+
+    if (editingIdRef.current === providerId) {
+      setShowForm(false);
+      setFormErrors({});
+    }
+  }, []);
+  const upsertProviderFromRealtime = useCallback((provider: Proveedor) => {
+    setProviders((current) => {
+      const existingIndex = current.findIndex((item) => item.id === provider.id);
+
+      if (existingIndex === -1) {
+        return [...current, provider];
+      }
+
+      return current.map((item) => (item.id === provider.id ? provider : item));
+    });
+    setSelectedProviderId((current) => current || provider.id);
+    setDeleteTarget((current) => (current?.id === provider.id ? provider : current));
+    setStatusTarget((current) => (current?.id === provider.id ? provider : current));
+  }, []);
+  const patchProviderActivity = useCallback(
+    async (payload: ActivityRealtimePayload) => {
+      if (!workspace || payload.entityType !== "proveedor" || !payload.entityId) {
+        return false;
+      }
+
+      if (payload.organizacionId !== workspace.scope.organizacionId) {
+        return false;
+      }
+
+      if (payload.action.includes("delete") || payload.action.includes("remove")) {
+        removeProviderFromState(payload.entityId);
+        return true;
+      }
+
+      const result = await getProviderById(createBrowserClient(), workspace.scope, payload.entityId);
+
+      if (!result.ok) {
+        if (result.error.code === "not_found") {
+          removeProviderFromState(payload.entityId);
+          return true;
+        }
+
+        return false;
+      }
+
+      upsertProviderFromRealtime(result.data);
+      return true;
+    },
+    [removeProviderFromState, upsertProviderFromRealtime, workspace]
+  );
   const activity = useActivitySubscription({
     currentActorId: workspace?.scope.actorId,
     enabled: Boolean(workspace),
     filter: activityFilter,
+    onActivity: patchProviderActivity,
     onRefetch: loadData,
     topicScope: activityTopic
   });
