@@ -420,3 +420,11 @@ Notas: los modales compartidos tienen semantica/foco/teclado accesible; tablas a
 - Se agregaron RPCs `list_organization_member_permissions` y `update_organization_member_permissions` con validaciones para owner, self-edit, admins y proyectos dentro de la organizacion.
 - RLS tests cubren listado/edicion por owner y bloqueo para miembros no admin.
 - Verificacion: `pnpm run supabase:reset`, `pnpm run supabase:types`, `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test` y `pnpm build`.
+
+### Hotfix admin de proyecto 2026-05-25
+
+- Se agrego `can_manage_organization_catalog` para que un usuario con rol `Admin` en al menos un proyecto pueda gestionar proveedores, recursos, cotizaciones, partidas y APU de la organizacion.
+- Recursos, Proveedores, Partidas y detalle APU ahora habilitan acciones si el usuario es admin de proyecto u organizacion.
+- La gestion de miembros, invitaciones y creacion de proyectos sigue limitada a owner/admin de organizacion.
+- RLS tests cubren que un admin de proyecto puede crear proveedor, recurso y partida, mientras el lector vuelve a quedar sin ese permiso.
+- Verificacion: `pnpm run supabase:reset`, `pnpm run supabase:types`, `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test` y `pnpm build`.

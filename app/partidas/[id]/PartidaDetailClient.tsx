@@ -32,7 +32,7 @@ import {
 } from "@/lib/data/items";
 import { listResources } from "@/lib/data/resources";
 import type { DataError, DataScope } from "@/lib/data/types";
-import { resolveOrganizationWorkspace } from "@/lib/data/workspace";
+import { canManageOrganizationCatalog, resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
@@ -97,7 +97,10 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
       return;
     }
 
-    const nextWorkspace: WorkspaceState = workspaceResult.data;
+    const nextWorkspace: WorkspaceState = {
+      ...workspaceResult.data,
+      canMutate: canManageOrganizationCatalog(workspaceResult.data)
+    };
 
     const [bundleResult, resourcesResult] = await Promise.all([
       getPartidaBundle(supabase, nextWorkspace.scope, params.id),
@@ -193,7 +196,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
     }
 
     if (!workspace.canMutate) {
-      setMutationError("Solo administradores de la organización pueden guardar el APU.");
+      setMutationError("Solo admins de proyecto u organización pueden guardar el APU.");
       return;
     }
 
@@ -256,7 +259,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
 
   function openEdit(resource: PartidaRecurso) {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden editar el APU.");
+      setMutationError("Solo admins de proyecto u organización pueden editar el APU.");
       return;
     }
 
@@ -277,7 +280,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
 
   async function removeResource(resourceId: string) {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden quitar recursos APU.");
+      setMutationError("Solo admins de proyecto u organización pueden quitar recursos APU.");
       return;
     }
 

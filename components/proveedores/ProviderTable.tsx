@@ -166,7 +166,7 @@ const ProviderTableRow = memo(function ProviderTableRow({
           <IconAction
             disabled={!canMutate}
             icon={Edit3}
-            label={canMutate ? `Editar ${provider.nombre}` : "Solo administradores pueden editar"}
+            label={canMutate ? `Editar ${provider.nombre}` : "Solo admins de proyecto u organización pueden editar"}
             onClick={handleEdit}
           />
           <IconAction
@@ -177,7 +177,7 @@ const ProviderTableRow = memo(function ProviderTableRow({
                 ? `${provider.nombre} ya esta inactivo`
                 : canMutate
                   ? `Desactivar ${provider.nombre}`
-                  : "Solo administradores pueden desactivar"
+                  : "Solo admins de proyecto u organización pueden desactivar"
             }
             onClick={handleDeactivate}
           />

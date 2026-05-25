@@ -134,7 +134,7 @@ export function ApuBuilderPanel({
           disabled={!canMutate || isSubmitting}
           icon={isEditing ? CheckCircle2 : Plus}
           onClick={onSubmit}
-          title={canMutate ? undefined : "Solo administradores pueden editar el APU"}
+          title={canMutate ? undefined : "Solo admins de proyecto u organización pueden editar el APU"}
         >
           {isSubmitting ? "Guardando..." : isEditing ? "Guardar recurso" : "Agregar recurso"}
         </Button>

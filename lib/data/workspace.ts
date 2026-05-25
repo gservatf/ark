@@ -130,6 +130,13 @@ export async function listWorkspaceOrganizations(
   return dataSuccess(((data || []) as unknown as OrganizationSummary[]).map(normalizeOrganizationSummary));
 }
 
+export function canManageOrganizationCatalog(workspace: OrganizationWorkspace) {
+  return (
+    workspace.canMutate ||
+    workspace.activeOrganization.projects.some((project) => getProjectRole(project) === "admin")
+  );
+}
+
 export function getStoredActiveOrganizationId() {
   if (typeof window === "undefined") {
     return null;

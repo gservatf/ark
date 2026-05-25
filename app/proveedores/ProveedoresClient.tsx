@@ -30,7 +30,7 @@ import {
   updateProvider
 } from "@/lib/data/providers";
 import type { DataError, DataScope } from "@/lib/data/types";
-import { resolveOrganizationWorkspace } from "@/lib/data/workspace";
+import { canManageOrganizationCatalog, resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
@@ -96,7 +96,10 @@ export default function ProveedoresPage() {
       return;
     }
 
-    const nextWorkspace: WorkspaceState = workspaceResult.data;
+    const nextWorkspace: WorkspaceState = {
+      ...workspaceResult.data,
+      canMutate: canManageOrganizationCatalog(workspaceResult.data)
+    };
 
     const [providersResult, resourcesResult] = await Promise.all([
       listProviders(supabase, nextWorkspace.scope),
@@ -214,7 +217,7 @@ export default function ProveedoresPage() {
 
   function openCreateForm() {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden crear proveedores.");
+      setMutationError("Solo admins de proyecto u organización pueden crear proveedores.");
       return;
     }
 
@@ -228,7 +231,7 @@ export default function ProveedoresPage() {
 
   function openEditForm(provider: Proveedor) {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden editar proveedores.");
+      setMutationError("Solo admins de proyecto u organización pueden editar proveedores.");
       return;
     }
 
@@ -257,7 +260,7 @@ export default function ProveedoresPage() {
     }
 
     if (!workspace.canMutate) {
-      setMutationError("Solo administradores de la organización pueden guardar proveedores.");
+      setMutationError("Solo admins de proyecto u organización pueden guardar proveedores.");
       return;
     }
 
@@ -452,7 +455,7 @@ export default function ProveedoresPage() {
                 title={
                   workspace?.canMutate
                     ? "Crear proveedor"
-                    : "Solo administradores pueden crear proveedores"
+                    : "Solo admins de proyecto u organización pueden crear proveedores"
                 }
               >
                 Nuevo proveedor

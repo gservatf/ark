@@ -43,7 +43,7 @@ import {
   updateResource
 } from "@/lib/data/resources";
 import type { DataError, DataScope } from "@/lib/data/types";
-import { resolveOrganizationWorkspace } from "@/lib/data/workspace";
+import { canManageOrganizationCatalog, resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
@@ -178,7 +178,10 @@ export default function RecursosPage() {
       return;
     }
 
-    const nextWorkspace: WorkspaceState = workspaceResult.data;
+    const nextWorkspace: WorkspaceState = {
+      ...workspaceResult.data,
+      canMutate: canManageOrganizationCatalog(workspaceResult.data)
+    };
 
     const [resourcesResult, providersResult] = await Promise.all([
       listResources(supabase, nextWorkspace.scope),
@@ -289,7 +292,7 @@ export default function RecursosPage() {
 
   function openCreateForm() {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden crear recursos.");
+      setMutationError("Solo admins de proyecto u organización pueden crear recursos.");
       return;
     }
 
@@ -317,7 +320,7 @@ export default function RecursosPage() {
 
   function openEditQuoteForm(quote: RecursoProveedorPrecio) {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden editar cotizaciones.");
+      setMutationError("Solo admins de proyecto u organización pueden editar cotizaciones.");
       return;
     }
 
@@ -331,7 +334,7 @@ export default function RecursosPage() {
 
   function openEditForm(resource: Recurso) {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden editar recursos.");
+      setMutationError("Solo admins de proyecto u organización pueden editar recursos.");
       return;
     }
 
@@ -373,7 +376,7 @@ export default function RecursosPage() {
     }
 
     if (!workspace.canMutate) {
-      setMutationError("Solo administradores de la organización pueden guardar recursos.");
+      setMutationError("Solo admins de proyecto u organización pueden guardar recursos.");
       return;
     }
 
@@ -436,7 +439,7 @@ export default function RecursosPage() {
     }
 
     if (!workspace.canMutate) {
-      setMutationError("Solo administradores de la organización pueden guardar cotizaciones.");
+      setMutationError("Solo admins de proyecto u organización pueden guardar cotizaciones.");
       return;
     }
 
@@ -518,7 +521,7 @@ export default function RecursosPage() {
     }
 
     if (!workspace.canMutate) {
-      setMutationError("Solo administradores de la organización pueden desactivar recursos.");
+      setMutationError("Solo admins de proyecto u organización pueden desactivar recursos.");
       setDeactivateTarget(undefined);
       return;
     }
@@ -734,7 +737,7 @@ export default function RecursosPage() {
                 title={
                   workspace?.canMutate
                     ? "Crear recurso"
-                    : "Solo administradores pueden crear recursos"
+                    : "Solo admins de proyecto u organización pueden crear recursos"
                 }
               >
                 Nuevo recurso

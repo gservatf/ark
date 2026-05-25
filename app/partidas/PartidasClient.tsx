@@ -32,7 +32,7 @@ import {
   updatePartida
 } from "@/lib/data/items";
 import type { DataError, DataScope } from "@/lib/data/types";
-import { resolveOrganizationWorkspace } from "@/lib/data/workspace";
+import { canManageOrganizationCatalog, resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
@@ -98,7 +98,10 @@ export default function PartidasPage() {
       return;
     }
 
-    const nextWorkspace: WorkspaceState = workspaceResult.data;
+    const nextWorkspace: WorkspaceState = {
+      ...workspaceResult.data,
+      canMutate: canManageOrganizationCatalog(workspaceResult.data)
+    };
 
     const [partidasResult, resourcesResult] = await Promise.all([
       listPartidas(supabase, nextWorkspace.scope),
@@ -198,7 +201,7 @@ export default function PartidasPage() {
 
   function openCreateForm() {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden crear partidas.");
+      setMutationError("Solo admins de proyecto u organización pueden crear partidas.");
       return;
     }
 
@@ -212,7 +215,7 @@ export default function PartidasPage() {
 
   function openEditForm(partida: Partida) {
     if (!workspace?.canMutate) {
-      setMutationError("Solo administradores de la organización pueden editar partidas.");
+      setMutationError("Solo admins de proyecto u organización pueden editar partidas.");
       return;
     }
 
@@ -240,7 +243,7 @@ export default function PartidasPage() {
     }
 
     if (!workspace.canMutate) {
-      setMutationError("Solo administradores de la organización pueden guardar partidas.");
+      setMutationError("Solo admins de proyecto u organización pueden guardar partidas.");
       return;
     }
 
@@ -429,7 +432,7 @@ export default function PartidasPage() {
                 title={
                   workspace?.canMutate
                     ? "Crear partida"
-                    : "Solo administradores pueden crear partidas"
+                    : "Solo admins de proyecto u organización pueden crear partidas"
                 }
               >
                 Nueva partida

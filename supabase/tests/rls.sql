@@ -135,6 +135,110 @@ select lives_ok(
   'owner restaura permisos de lector'
 );
 select lives_ok(
+  $$
+    select public.update_organization_member_permissions(
+      '00000000-0000-0000-0000-000000000901',
+      (
+        select id
+        from public.organizacion_miembros
+        where organizacion_id = '00000000-0000-0000-0000-000000000901'
+          and user_id = '00000000-0000-0000-0000-00000000a003'
+      ),
+      'miembro',
+      false,
+      null,
+      jsonb_build_array(jsonb_build_object(
+        'projectId', '00000000-0000-0000-0000-000000000902',
+        'rol', 'admin'
+      ))
+    )
+  $$,
+  'owner asigna admin de proyecto'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a003', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select ok(
+  public.can_manage_organization_catalog('00000000-0000-0000-0000-000000000901'),
+  'admin de proyecto puede gestionar catalogo operativo'
+);
+select lives_ok(
+  $$
+    insert into public.proveedores (
+      organizacion_id,
+      nombre,
+      ruc
+    ) values (
+      '00000000-0000-0000-0000-000000000901',
+      'Proveedor creado por admin proyecto',
+      '20999999991'
+    )
+  $$,
+  'admin de proyecto crea proveedor'
+);
+select lives_ok(
+  $$
+    insert into public.recursos (
+      organizacion_id,
+      nombre,
+      tipo,
+      unidad,
+      costo_unitario_actual
+    ) values (
+      '00000000-0000-0000-0000-000000000901',
+      'Recurso creado por admin proyecto',
+      'material',
+      'und',
+      1
+    )
+  $$,
+  'admin de proyecto crea recurso'
+);
+select lives_ok(
+  $$
+    insert into public.partidas (
+      organizacion_id,
+      codigo,
+      nombre,
+      unidad
+    ) values (
+      '00000000-0000-0000-0000-000000000901',
+      'ADM-PROJ-001',
+      'Partida creada por admin proyecto',
+      'und'
+    )
+  $$,
+  'admin de proyecto crea partida'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a001', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select lives_ok(
+  $$
+    select public.update_organization_member_permissions(
+      '00000000-0000-0000-0000-000000000901',
+      (
+        select id
+        from public.organizacion_miembros
+        where organizacion_id = '00000000-0000-0000-0000-000000000901'
+          and user_id = '00000000-0000-0000-0000-00000000a003'
+      ),
+      'miembro',
+      false,
+      null,
+      jsonb_build_array(jsonb_build_object(
+        'projectId', '00000000-0000-0000-0000-000000000902',
+        'rol', 'lector'
+      ))
+    )
+  $$,
+  'owner restaura lector despues de prueba de admin proyecto'
+);
+select lives_ok(
   $$ select public.create_project_with_current_member('Proyecto Nuevo Owner', 'Cliente Demo', 'Lima') $$,
   'owner crea proyecto via RPC'
 );

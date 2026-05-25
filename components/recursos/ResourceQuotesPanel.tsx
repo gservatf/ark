@@ -72,7 +72,7 @@ export function ResourceQuotesPanel({
           disabled={!resource || !canMutate || isLoading}
           icon={Plus}
           onClick={onOpenCreate}
-          title={canMutate ? "Nueva cotización" : "Solo administradores pueden crear cotizaciones"}
+          title={canMutate ? "Nueva cotización" : "Solo admins de proyecto u organización pueden crear cotizaciones"}
         >
           Nueva
         </Button>

@@ -1703,6 +1703,10 @@ export type Database = {
         Args: { target_project_id: string }
         Returns: boolean
       }
+      can_manage_organization_catalog: {
+        Args: { target_organization_id: string }
+        Returns: boolean
+      }
       can_read_project: {
         Args: { target_project_id: string }
         Returns: boolean
