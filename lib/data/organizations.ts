@@ -30,6 +30,42 @@ export type OrganizationInvitation = {
 
 export type ProjectAccessRole = "admin" | "editor" | "lector";
 
+export type OrganizationMemberProjectAccess = {
+  cliente: string | null;
+  effectiveRole: ProjectAccessRole | null;
+  estado: "activo" | "invitado" | "suspendido" | null;
+  explicitRole: ProjectAccessRole | null;
+  hasExplicitAccess: boolean;
+  isInherited: boolean;
+  projectId: string;
+  projectName: string;
+  ubicacion: string | null;
+};
+
+export type OrganizationMemberPermissions = {
+  accesoTodosProyectos: boolean;
+  createdAt: string;
+  displayName: string;
+  email: string | null;
+  estado: "activo" | "invitado" | "suspendido";
+  id: string;
+  joinedAt: string | null;
+  projects: OrganizationMemberProjectAccess[];
+  rolOrganizacion: "admin" | "miembro" | "owner";
+  rolProyectoPredeterminado: ProjectAccessRole | null;
+  updatedAt: string;
+  userId: string;
+};
+
+export type UpdateOrganizationMemberPermissionsInput = {
+  accesoTodosProyectos: boolean;
+  memberId: string;
+  organizacionId: string;
+  projectAccess: Array<{ projectId: string; rol: ProjectAccessRole }>;
+  rolOrganizacion: "admin" | "miembro";
+  rolProyectoPredeterminado?: ProjectAccessRole | null;
+};
+
 export type InvitationLinkResult = {
   email: string;
   expiresAt: string;
@@ -179,6 +215,44 @@ export async function listOrganizationInvitationNotifications(
   }
 
   return dataSuccess((data || []) as unknown as OrganizationInvitation[]);
+}
+
+export async function listOrganizationMemberPermissions(
+  client: DataClient,
+  organizationId: string
+): Promise<DataResult<OrganizationMemberPermissions[]>> {
+  const { data, error } = await client.rpc("list_organization_member_permissions", {
+    p_organizacion_id: organizationId
+  });
+
+  if (error) {
+    return dataFailure(normalizeSupabaseError(error, "organizaciones.memberPermissionsRpc"));
+  }
+
+  return dataSuccess((data || []) as unknown as OrganizationMemberPermissions[]);
+}
+
+export async function updateOrganizationMemberPermissions(
+  client: DataClient,
+  input: UpdateOrganizationMemberPermissionsInput
+): Promise<DataResult<OrganizationMemberPermissions[]>> {
+  const { data, error } = await client.rpc("update_organization_member_permissions", {
+    p_acceso_todos_proyectos: input.accesoTodosProyectos,
+    p_organizacion_id: input.organizacionId,
+    p_organizacion_miembro_id: input.memberId,
+    p_project_access: input.projectAccess,
+    p_rol_organizacion: input.rolOrganizacion,
+    p_rol_proyecto_predeterminado: input.accesoTodosProyectos
+      ? input.rolProyectoPredeterminado || "lector"
+      : undefined
+  });
+
+  if (error) {
+    return dataFailure(normalizeSupabaseError(error, "organizaciones.updateMemberPermissionsRpc"));
+  }
+
+  clearWorkspaceCache(client);
+  return dataSuccess((data || []) as unknown as OrganizationMemberPermissions[]);
 }
 
 export async function acceptOrganizationInvitation(

@@ -412,3 +412,11 @@ Notas: los modales compartidos tienen semantica/foco/teclado accesible; tablas a
 - La lista de invitaciones enviadas muestra solo invitaciones pendientes.
 - Owners/admins ven en Notificaciones las invitaciones aceptadas o rechazadas dentro de la organizacion activa.
 - Verificacion: `pnpm run supabase:reset` aplico migraciones y seed localmente, pero cerro con aviso de healthcheck en Storage; luego pasaron `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test` y `pnpm build`.
+
+### Gestion de permisos 2026-05-25
+
+- `/configuracion/organizaciones` incorpora la seccion `Miembros y permisos` para owners/admins.
+- Cada miembro muestra nombre, correo, rol de organizacion y resumen de acceso; al desplegarlo se editan rol de organizacion, acceso a todos/futuros proyectos, rol por defecto y proyectos especificos.
+- Se agregaron RPCs `list_organization_member_permissions` y `update_organization_member_permissions` con validaciones para owner, self-edit, admins y proyectos dentro de la organizacion.
+- RLS tests cubren listado/edicion por owner y bloqueo para miembros no admin.
+- Verificacion: `pnpm run supabase:reset`, `pnpm run supabase:types`, `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test` y `pnpm build`.

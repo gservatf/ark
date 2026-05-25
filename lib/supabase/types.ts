@@ -1862,6 +1862,10 @@ export type Database = {
         Args: { p_organizacion_id: string }
         Returns: Json
       }
+      list_organization_member_permissions: {
+        Args: { p_organizacion_id: string }
+        Returns: Json
+      }
       list_received_organization_invitations: { Args: never; Returns: Json }
       list_sent_organization_invitations: {
         Args: { p_organizacion_id: string }
@@ -1949,6 +1953,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_organization_member_permissions: {
+        Args: {
+          p_acceso_todos_proyectos?: boolean
+          p_organizacion_id: string
+          p_organizacion_miembro_id: string
+          p_project_access?: Json
+          p_rol_organizacion: Database["public"]["Enums"]["rol_organizacion"]
+          p_rol_proyecto_predeterminado?: Database["public"]["Enums"]["rol_proyecto"]
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -2121,3 +2136,4 @@ export const Constants = {
     },
   },
 } as const
+

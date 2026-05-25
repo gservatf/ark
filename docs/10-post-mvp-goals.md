@@ -23,7 +23,7 @@ Si alguno de esos puntos sigue pendiente, debe permanecer en `docs/09-avances-y-
 | Etapa | Estado | Avance | Objetivo | Pendiente principal | Verificación |
 | --- | --- | ---: | --- | --- | --- |
 | 1. Producción y ambientes | Pendiente | 0% | Llevar el MVP a staging/producción con Supabase remoto y despliegue controlado | Proyecto remoto, migraciones, env vars, dominio, backups y smoke tests | Pendiente |
-| 2. Administración SaaS | En progreso | 50% | Gestionar organizaciones, usuarios, roles e invitaciones desde UI | Organizaciones personales/empresa, selector activo e invitaciones multi-proyecto con futuros proyectos implementadas; faltan edicion avanzada de miembros y ownership transfer | Verificado 2026-05-25 |
+| 2. Administración SaaS | En progreso | 70% | Gestionar organizaciones, usuarios, roles e invitaciones desde UI | Organizaciones personales/empresa, selector activo, invitaciones multi-proyecto y matriz editable de permisos por miembro implementadas; falta ownership transfer y suspension/remocion formal de miembros | Verificado 2026-05-25 |
 | 3. Importación y catálogo | Pendiente | 0% | Acelerar carga de recursos, proveedores y partidas | Importación masiva, validación de plantillas y deduplicación | Pendiente |
 | 4. Aprobaciones y workflow | Pendiente | 0% | Formalizar revisión, aprobación y emisión de presupuestos | Estados, permisos, comentarios y bloqueo de versiones | Pendiente |
 | 5. Reportes avanzados | Pendiente | 0% | Pasar de reportes simples a análisis gerencial | Filtros, comparativos, dashboards y gráficos | Pendiente |

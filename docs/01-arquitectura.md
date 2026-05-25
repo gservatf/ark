@@ -88,7 +88,7 @@ Rutas pendientes:
 - UI: componentes visuales, formularios mock y tablas.
 - Mock data: datos frontend en `lib/mock-data/` mientras no exista persistencia real.
 - Validación: esquemas Zod reutilizables en `lib/validations/`.
-- Capa de datos: repositorios y contratos en `lib/data/` para encapsular Supabase, errores, loading, scope organizacion/proyecto, mocks temporales y auditoria. Ya cubre proveedores, recursos, cotizaciones multi-proveedor, proyectos, organizaciones, invitaciones, actividad reciente y presupuestos/versiones; las mutaciones críticas de presupuestos y creación de proyectos usan RPCs transaccionales en Postgres. `lib/data/budgets.ts` queda como fachada pública compatible sobre submódulos internos de presupuestos.
+- Capa de datos: repositorios y contratos en `lib/data/` para encapsular Supabase, errores, loading, scope organizacion/proyecto, mocks temporales y auditoria. Ya cubre proveedores, recursos, cotizaciones multi-proveedor, proyectos, organizaciones, invitaciones, permisos de miembros, actividad reciente y presupuestos/versiones; las mutaciones críticas de presupuestos, creación de proyectos y edición de permisos usan RPCs transaccionales en Postgres. `lib/data/budgets.ts` queda como fachada pública compatible sobre submódulos internos de presupuestos.
 - Busqueda global: `lib/search/global.ts` construye resultados navegables para proyectos, partidas, recursos y proveedores desde datos ya autorizados por RLS.
 - Realtime base: utilidades en `lib/realtime/` para topics privados, payloads de actividad, dedupe, debounce y suscripcion Broadcast.
 - Datos persistentes: Supabase preparado en `lib/supabase/`; las pantallas no deben importarlo directamente cuando se conecten a persistencia.
@@ -172,6 +172,7 @@ La resolución de conflictos vive en `lib/data/`. Las mutaciones editables recib
 - Existe migración `20260522165506_create_project_activity_center.sql` con RPC transaccional para crear proyectos adicionales, membresía admin del creador y auditoría `entity_type = 'proyecto'`.
 - Existe migración `20260525090532_onboarding_profile_workspace.sql` para que onboarding guarde nombre/apellido, actualice `user_profiles.display_name` y cree una organización vacía de ownership sin forzar proyecto inicial.
 - Existe migración `20260525100520_multi_organization_invitations.sql` para distinguir organizaciones `personal | empresa`, resolver organizaciones/proyectos por organización activa, crear empresas, crear proyectos dentro del scope activo e invitar usuarios con varios proyectos seleccionados o acceso automatico a proyectos futuros.
+- Existe migración `20260525163547_organization_member_permissions.sql` para listar la matriz de miembros/proyectos y actualizar roles de organizacion, acceso a todos los proyectos, rol por defecto y accesos especificos por proyecto con validaciones server-side.
 - Los tipos de Supabase en `lib/supabase/types.ts` se generaron desde la base local con `pnpm run supabase:types`.
 - Las migraciones y `supabase/seed.sql` fueron validadas con `pnpm run supabase:reset` en Supabase local.
 - Existe capa base en `lib/data/` para proveedores, recursos, cotizaciones, partidas/APU, proyectos, actividad y presupuestos. La UI ya consulta y persiste estos módulos en Supabase; cronogramas sigue pendiente de persistencia.

@@ -87,6 +87,53 @@ select is(
   1,
   'dashboard RPC devuelve solo proyectos accesibles del owner'
 );
+select ok(
+  jsonb_array_length(public.list_organization_member_permissions('00000000-0000-0000-0000-000000000901'::uuid)) >= 3,
+  'owner lista matriz de permisos de miembros'
+);
+select lives_ok(
+  $$
+    select public.update_organization_member_permissions(
+      '00000000-0000-0000-0000-000000000901',
+      (
+        select id
+        from public.organizacion_miembros
+        where organizacion_id = '00000000-0000-0000-0000-000000000901'
+          and user_id = '00000000-0000-0000-0000-00000000a003'
+      ),
+      'miembro',
+      false,
+      null,
+      jsonb_build_array(jsonb_build_object(
+        'projectId', '00000000-0000-0000-0000-000000000902',
+        'rol', 'editor'
+      ))
+    )
+  $$,
+  'owner actualiza permisos de proyecto de un miembro'
+);
+select ok(public.can_edit_project('00000000-0000-0000-0000-000000000902'), 'permiso actualizado permite editar');
+select lives_ok(
+  $$
+    select public.update_organization_member_permissions(
+      '00000000-0000-0000-0000-000000000901',
+      (
+        select id
+        from public.organizacion_miembros
+        where organizacion_id = '00000000-0000-0000-0000-000000000901'
+          and user_id = '00000000-0000-0000-0000-00000000a003'
+      ),
+      'miembro',
+      false,
+      null,
+      jsonb_build_array(jsonb_build_object(
+        'projectId', '00000000-0000-0000-0000-000000000902',
+        'rol', 'lector'
+      ))
+    )
+  $$,
+  'owner restaura permisos de lector'
+);
 select lives_ok(
   $$ select public.create_project_with_current_member('Proyecto Nuevo Owner', 'Cliente Demo', 'Lima') $$,
   'owner crea proyecto via RPC'
@@ -310,6 +357,11 @@ select throws_ok(
   '42501',
   null,
   'miembro sin rol owner/admin no crea proyectos'
+);
+select is(
+  jsonb_array_length(public.list_organization_member_permissions('00000000-0000-0000-0000-000000000901'::uuid)),
+  0,
+  'miembro no admin no lista matriz de permisos'
 );
 select ok(public.can_edit_project('00000000-0000-0000-0000-000000000902'), 'editor puede editar borrador');
 select ok(not public.can_emit_project('00000000-0000-0000-0000-000000000902'), 'editor no puede emitir versiones');

@@ -20,7 +20,7 @@ El modelo de datos estÃ¡ documentado y preparado en SQL. La UI ya lo usa como 
 - La creaciÃ³n de proyectos post-onboarding vive en `supabase/migrations/20260522165506_create_project_activity_center.sql`: agrega `create_project_with_current_member`, registra auditorÃ­a `proyecto` y habilita el centro de actividad persistente.
 - El onboarding personal vive en `supabase/migrations/20260525090532_onboarding_profile_workspace.sql`: agrega `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar el nombre visible del usuario y crear una organizaciÃ³n vacÃ­a sin proyecto inicial.
 
-- Multi-organizacion 2026-05-25: `supabase/migrations/20260525100520_multi_organization_invitations.sql` agrega `tipo_organizacion`, `organizacion_invitaciones`, `create_organization_for_current_user`, `create_project_in_organization`, `list_workspace_organizations`, `list_budget_dashboard_projects(p_organizacion_id)` e invitaciones a organizacion con seleccion multiple de proyectos.
+- Multi-organizacion 2026-05-25: `supabase/migrations/20260525100520_multi_organization_invitations.sql` agrega `tipo_organizacion`, `organizacion_invitaciones`, `create_organization_for_current_user`, `create_project_in_organization`, `list_workspace_organizations`, `list_budget_dashboard_projects(p_organizacion_id)` e invitaciones a organizacion con seleccion multiple de proyectos. `20260525163547_organization_member_permissions.sql` agrega RPCs para listar y actualizar permisos de miembros por organizacion/proyecto.
 
 ## Contratos de capa de datos
 
@@ -44,6 +44,7 @@ Reglas actuales:
 - El flujo nuevo de proyectos usa `create_project_in_organization(p_organizacion_id, nombre_proyecto, cliente, ubicacion)` para respetar la organizacion activa recordada por navegador.
 - Organizaciones e invitaciones se gestionan en `lib/data/organizations.ts`; las invitaciones guardan token hasheado, estado, expiracion, proyectos seleccionados e inclusion automatica en proyectos futuros, y se aceptan solo con el correo verificado del usuario autenticado.
 - `organizacion_miembros.acceso_todos_proyectos` y `rol_proyecto_predeterminado` permiten que un miembro acceda a todos los proyectos actuales/futuros sin convertirlo en admin de organizacion.
+- `list_organization_member_permissions(p_organizacion_id)` devuelve miembros activos, perfil confiable, rol de organizacion y matriz de proyectos. `update_organization_member_permissions(...)` permite a owners/admins editar permisos, bloquea self-edit, no permite editar owners desde el panel y registra auditoria.
 - Actividad reciente se consulta desde `lib/data/activity.ts`, leyendo `activity_events` bajo RLS para la campanita del topbar.
 - Al cambiar costo unitario o transporte de un recurso se registra `recurso_precios_historial` y tambien `activity_events`.
 - `createResourceCatalogPriceChange` describe el cambio de precio del catalogo, `canAutoUpdateDraftResourcePrice` cubre el contrato de recursos y `shouldAutoUpdateDraftResourcePrice` aplica la regla real en presupuestos: solo recursos del mismo catÃ¡logo, dentro de lÃ­neas no fijadas, con `autoactualizar_precio = true`, `precio_fijado = false` y `precio_origen = 'catalogo'`.

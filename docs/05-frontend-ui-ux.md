@@ -259,6 +259,7 @@ Reglas UX:
 - El Topbar combina selector de organizacion y proyecto en forma de arbol: cada organizacion despliega sus proyectos y la accion de crear proyecto dentro de ese contexto.
 - Cambiar organizacion o proyecto conserva la seccion actual cuando la ruta sigue siendo valida; solo evita quedarse en un detalle de presupuesto que ya no pertenece al contexto seleccionado.
 - `/configuracion/organizaciones` queda enlazado desde el menu de perfil y permite crear organizaciones de empresa, revisar organizaciones disponibles, invitar colaboradores con proyecto opcional y aceptar/rechazar invitaciones recibidas.
+- La misma pantalla incluye `Miembros y permisos`: owners/admins ven miembros con nombre y correo, despliegan cada miembro, revisan proyectos accesibles y editan rol de organizacion, acceso a todos/futuros proyectos, rol por defecto y roles especificos por proyecto.
 - Las invitaciones usan seleccion multiple de proyectos con checkboxes y una casilla para incluir automaticamente al usuario en proyectos futuros.
 - El campo de correos de invitacion acepta uno o varios correos separados por espacios, comas o saltos de linea, aplicando las mismas propiedades de acceso a todos.
 - Si el rol de organizacion es `Admin`, la UI marca todos los proyectos, activa futuros proyectos y bloquea esas opciones; el rol de proyecto queda como `Admin`.

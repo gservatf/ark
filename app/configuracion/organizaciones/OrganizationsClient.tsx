@@ -2,12 +2,16 @@
 
 import {
   Building2,
+  ChevronDown,
   CheckCircle2,
   MailPlus,
   Plus,
   RefreshCcw,
+  Save,
   Send,
+  ShieldCheck,
   Trash2,
+  Users,
   XCircle
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,10 +27,14 @@ import {
   acceptOrganizationInvitation,
   acceptOrganizationInvitationById,
   createOrganization,
+  listOrganizationMemberPermissions,
   listReceivedOrganizationInvitations,
   listSentOrganizationInvitations,
   rejectOrganizationInvitation,
   revokeOrganizationInvitation,
+  updateOrganizationMemberPermissions,
+  type OrganizationMemberPermissions,
+  type ProjectAccessRole,
   type OrganizationInvitation
 } from "@/lib/data/organizations";
 import {
@@ -69,6 +77,7 @@ export function OrganizationsClient() {
   const supabase = useMemo(() => createBrowserClient(), []);
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [activeOrganization, setActiveOrganization] = useState<OrganizationSummary | null>(null);
+  const [memberPermissions, setMemberPermissions] = useState<OrganizationMemberPermissions[]>([]);
   const [sentInvitations, setSentInvitations] = useState<OrganizationInvitation[]>([]);
   const [receivedInvitations, setReceivedInvitations] = useState<OrganizationInvitation[]>([]);
   const [organizationForm, setOrganizationForm] = useState(initialOrganizationForm);
@@ -78,6 +87,8 @@ export function OrganizationsClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+  const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -92,15 +103,17 @@ export function OrganizationsClient() {
     }
 
     const active = workspaceResult.data.activeOrganization;
-    const [sentResult, receivedResult] = await Promise.all([
+    const [sentResult, receivedResult, membersResult] = await Promise.all([
       listSentOrganizationInvitations(supabase, active.id),
-      listReceivedOrganizationInvitations(supabase)
+      listReceivedOrganizationInvitations(supabase),
+      active.canMutate ? listOrganizationMemberPermissions(supabase, active.id) : Promise.resolve(null)
     ]);
 
     setOrganizations(workspaceResult.data.organizations);
     setActiveOrganization(active);
     setSentInvitations(sentResult.ok ? sentResult.data : []);
     setReceivedInvitations(receivedResult.ok ? receivedResult.data : []);
+    setMemberPermissions(membersResult?.ok ? membersResult.data : []);
     setIsLoading(false);
   }, [supabase]);
 
@@ -285,6 +298,46 @@ export function OrganizationsClient() {
     router.refresh();
   }
 
+  async function handleSaveMemberPermissions(
+    member: OrganizationMemberPermissions,
+    input: {
+      accesoTodosProyectos: boolean;
+      projectAccess: Array<{ projectId: string; rol: ProjectAccessRole }>;
+      rolOrganizacion: "admin" | "miembro";
+      rolProyectoPredeterminado: ProjectAccessRole | null;
+    }
+  ) {
+    if (!activeOrganization) {
+      return;
+    }
+
+    setSavingMemberId(member.id);
+    setError(null);
+    setFeedback(null);
+
+    const result = await updateOrganizationMemberPermissions(supabase, {
+      accesoTodosProyectos: input.accesoTodosProyectos,
+      memberId: member.id,
+      organizacionId: activeOrganization.id,
+      projectAccess: input.projectAccess,
+      rolOrganizacion: input.rolOrganizacion,
+      rolProyectoPredeterminado: input.rolProyectoPredeterminado
+    });
+
+    setSavingMemberId(null);
+
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+
+    setMemberPermissions(result.data);
+    clearWorkspaceCache(supabase);
+    setFeedback("Permisos actualizados correctamente.");
+    await loadData();
+    router.refresh();
+  }
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -375,6 +428,51 @@ export function OrganizationsClient() {
             </form>
           </article>
         </section>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                <Users className="h-5 w-5 text-brand-600" />
+                Miembros y permisos
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Revisa el rol de cada persona en la organizacion activa y sus accesos por proyecto.
+              </p>
+            </div>
+            {activeOrganization ? (
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {activeOrganization.nombre}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-4 space-y-3">
+            {!canAdminActiveOrganization ? (
+              <EmptyState
+                description="Solo owners y admins pueden ver y editar la matriz completa de permisos."
+                title="Permisos restringidos"
+              />
+            ) : memberPermissions.length > 0 && activeOrganization ? (
+              memberPermissions.map((member) => (
+                <MemberPermissionsCard
+                  activeMembershipId={activeOrganization.membershipId}
+                  isExpanded={expandedMemberId === member.id}
+                  isSaving={savingMemberId === member.id}
+                  key={member.id}
+                  member={member}
+                  onSave={handleSaveMemberPermissions}
+                  onToggle={() => setExpandedMemberId((current) => (current === member.id ? null : member.id))}
+                />
+              ))
+            ) : (
+              <EmptyState
+                description="Cuando haya miembros activos en esta organizacion, apareceran aqui."
+                title="Sin miembros para mostrar"
+              />
+            )}
+          </div>
+        </article>
 
         <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
@@ -618,6 +716,256 @@ function InvitationRow({
   );
 }
 
+function MemberPermissionsCard({
+  activeMembershipId,
+  isExpanded,
+  isSaving,
+  member,
+  onSave,
+  onToggle
+}: {
+  activeMembershipId: string;
+  isExpanded: boolean;
+  isSaving: boolean;
+  member: OrganizationMemberPermissions;
+  onSave: (
+    member: OrganizationMemberPermissions,
+    input: {
+      accesoTodosProyectos: boolean;
+      projectAccess: Array<{ projectId: string; rol: ProjectAccessRole }>;
+      rolOrganizacion: "admin" | "miembro";
+      rolProyectoPredeterminado: ProjectAccessRole | null;
+    }
+  ) => Promise<void>;
+  onToggle: () => void;
+}) {
+  const isOwner = member.rolOrganizacion === "owner";
+  const isSelf = member.id === activeMembershipId;
+  const isOrgAdmin = member.rolOrganizacion === "admin";
+  const isLocked = isOwner || isSelf;
+  const initialProjectAccess = useMemo(
+    () =>
+      member.projects
+        .filter((project) => Boolean(project.effectiveRole))
+        .map((project) => ({
+          projectId: project.projectId,
+          rol: (project.effectiveRole || "lector") as ProjectAccessRole
+        })),
+    [member.projects]
+  );
+  const [rolOrganizacion, setRolOrganizacion] = useState<"admin" | "miembro">(
+    member.rolOrganizacion === "admin" ? "admin" : "miembro"
+  );
+  const [accesoTodosProyectos, setAccesoTodosProyectos] = useState(
+    member.rolOrganizacion === "admin" || member.accesoTodosProyectos
+  );
+  const [rolProyectoPredeterminado, setRolProyectoPredeterminado] = useState<ProjectAccessRole>(
+    (member.rolOrganizacion === "admin" ? "admin" : member.rolProyectoPredeterminado) || "lector"
+  );
+  const [projectAccess, setProjectAccess] =
+    useState<Array<{ projectId: string; rol: ProjectAccessRole }>>(initialProjectAccess);
+
+  useEffect(() => {
+    setRolOrganizacion(member.rolOrganizacion === "admin" ? "admin" : "miembro");
+    setAccesoTodosProyectos(member.rolOrganizacion === "admin" || member.accesoTodosProyectos);
+    setRolProyectoPredeterminado(
+      (member.rolOrganizacion === "admin" ? "admin" : member.rolProyectoPredeterminado) || "lector"
+    );
+    setProjectAccess(initialProjectAccess);
+  }, [initialProjectAccess, member.accesoTodosProyectos, member.rolOrganizacion, member.rolProyectoPredeterminado]);
+
+  const effectiveAllProjects = rolOrganizacion === "admin" || accesoTodosProyectos;
+  const projectCount = member.projects.filter((project) => Boolean(project.effectiveRole)).length;
+
+  function toggleProject(projectId: string, enabled: boolean) {
+    setProjectAccess((current) => {
+      if (enabled) {
+        return current.some((item) => item.projectId === projectId)
+          ? current
+          : [...current, { projectId, rol: "lector" }];
+      }
+
+      return current.filter((item) => item.projectId !== projectId);
+    });
+  }
+
+  function setProjectRole(projectId: string, rol: ProjectAccessRole) {
+    setProjectAccess((current) =>
+      current.map((item) => (item.projectId === projectId ? { ...item, rol } : item))
+    );
+  }
+
+  function getSelectedRole(projectId: string) {
+    return projectAccess.find((item) => item.projectId === projectId)?.rol || "lector";
+  }
+
+  return (
+    <article className="rounded-2xl border border-slate-200">
+      <button
+        className="flex w-full flex-col gap-3 p-4 text-left transition hover:bg-slate-50 md:flex-row md:items-center md:justify-between"
+        onClick={onToggle}
+        type="button"
+      >
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-bold text-slate-950">{member.displayName}</span>
+          <span className="mt-1 block truncate text-xs text-slate-500">{member.email || "Sin correo visible"}</span>
+        </span>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+            {getOrganizationRoleLabel(member.rolOrganizacion)}
+          </span>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-brand-700">
+            {isOrgAdmin || isOwner || member.accesoTodosProyectos
+              ? "Todos los proyectos"
+              : `${projectCount} proyecto${projectCount === 1 ? "" : "s"}`}
+          </span>
+          <ChevronDown
+            className={cn("h-4 w-4 text-slate-400 transition", isExpanded && "rotate-180")}
+          />
+        </span>
+      </button>
+
+      {isExpanded ? (
+        <div className="border-t border-slate-200 p-4">
+          {isLocked ? (
+            <p className="mb-4 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-600">
+              {isOwner
+                ? "El owner mantiene administracion total y no se edita desde este panel."
+                : "No puedes editar tus propios permisos desde este panel."}
+            </p>
+          ) : null}
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Rol en organizacion</span>
+              <select
+                className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
+                disabled={isLocked}
+                onChange={(event) => {
+                  const nextRole = event.target.value as "admin" | "miembro";
+                  setRolOrganizacion(nextRole);
+                  if (nextRole === "admin") {
+                    setAccesoTodosProyectos(true);
+                    setRolProyectoPredeterminado("admin");
+                  }
+                }}
+                value={rolOrganizacion}
+              >
+                <option value="miembro">Miembro</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Acceso futuro</span>
+              <select
+                className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
+                disabled={isLocked || rolOrganizacion === "admin"}
+                onChange={(event) => setAccesoTodosProyectos(event.target.value === "todos")}
+                value={effectiveAllProjects ? "todos" : "seleccionados"}
+              >
+                <option value="seleccionados">Solo seleccionados</option>
+                <option value="todos">Todos y futuros</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Rol por defecto</span>
+              <select
+                className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400"
+                disabled={isLocked || !effectiveAllProjects || rolOrganizacion === "admin"}
+                onChange={(event) => setRolProyectoPredeterminado(event.target.value as ProjectAccessRole)}
+                value={rolOrganizacion === "admin" ? "admin" : rolProyectoPredeterminado}
+              >
+                <option value="lector">Lector</option>
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-[1fr_140px] gap-3 border-b border-slate-200 px-3 py-2 text-xs font-bold uppercase text-slate-400 md:grid-cols-[1fr_140px_160px]">
+              <span>Proyecto</span>
+              <span>Acceso</span>
+              <span className="hidden md:block">Rol</span>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {member.projects.length > 0 ? (
+                member.projects.map((project) => {
+                  const checked =
+                    rolOrganizacion === "admin" ||
+                    effectiveAllProjects ||
+                    projectAccess.some((item) => item.projectId === project.projectId);
+                  const selectedRole =
+                    rolOrganizacion === "admin"
+                      ? "admin"
+                      : effectiveAllProjects
+                        ? rolProyectoPredeterminado
+                        : getSelectedRole(project.projectId);
+
+                  return (
+                    <div
+                      className="grid grid-cols-[1fr_140px] gap-3 px-3 py-3 text-sm md:grid-cols-[1fr_140px_160px]"
+                      key={project.projectId}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-slate-900">{project.projectName}</p>
+                        <p className="truncate text-xs text-slate-500">
+                          {[project.cliente, project.ubicacion].filter(Boolean).join(" - ") || "Sin cliente"}
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                        <input
+                          checked={checked}
+                          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                          disabled={isLocked || effectiveAllProjects}
+                          onChange={(event) => toggleProject(project.projectId, event.target.checked)}
+                          type="checkbox"
+                        />
+                        {checked ? "Incluido" : "Sin acceso"}
+                      </label>
+                      <select
+                        className="col-span-2 h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400 md:col-span-1"
+                        disabled={isLocked || !checked || effectiveAllProjects}
+                        onChange={(event) => setProjectRole(project.projectId, event.target.value as ProjectAccessRole)}
+                        value={selectedRole}
+                      >
+                        <option value="lector">Lector</option>
+                        <option value="editor">Editor</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="p-4 text-sm text-slate-500">Esta organizacion todavia no tiene proyectos.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <Button
+              disabled={isLocked || isSaving}
+              icon={Save}
+              onClick={() =>
+                void onSave(member, {
+                  accesoTodosProyectos: effectiveAllProjects,
+                  projectAccess: effectiveAllProjects ? [] : projectAccess,
+                  rolOrganizacion,
+                  rolProyectoPredeterminado: effectiveAllProjects ? rolProyectoPredeterminado : null
+                })
+              }
+            >
+              {isSaving ? "Guardando..." : "Guardar permisos"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function getInvitationProjectSummary(invitation: OrganizationInvitation) {
   const projectNames = invitation.proyectoNombres?.length
     ? invitation.proyectoNombres
@@ -639,6 +987,18 @@ function getInvitationProjectSummary(invitation: OrganizationInvitation) {
   }
 
   return `${parts.join(" + ")} (${invitation.rolProyecto})`;
+}
+
+function getOrganizationRoleLabel(role: OrganizationMemberPermissions["rolOrganizacion"]) {
+  if (role === "owner") {
+    return "Owner";
+  }
+
+  if (role === "admin") {
+    return "Admin";
+  }
+
+  return "Miembro";
 }
 
 async function copyInviteLinks(values: string[]) {
