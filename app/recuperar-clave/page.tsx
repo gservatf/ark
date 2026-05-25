@@ -6,8 +6,8 @@ import { useState } from "react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
+import { buildOAuthRedirectTo } from "@/lib/auth/oauth";
 import { createBrowserClient } from "@/lib/supabase/browser";
-import { buildAppUrl } from "@/lib/supabase/config";
 
 export default function RecuperarClavePage() {
   const [email, setEmail] = useState("");
@@ -32,7 +32,7 @@ export default function RecuperarClavePage() {
     const supabase = createBrowserClient();
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       ...(captchaToken ? { captchaToken } : {}),
-      redirectTo: buildAppUrl("/actualizar-clave")
+      redirectTo: buildOAuthRedirectTo("/actualizar-clave")
     });
     setIsLoading(false);
     setCaptchaResetSignal((current) => current + 1);
