@@ -88,11 +88,11 @@ Rutas pendientes:
 - UI: componentes visuales, formularios mock y tablas.
 - Mock data: datos frontend en `lib/mock-data/` mientras no exista persistencia real.
 - Validación: esquemas Zod reutilizables en `lib/validations/`.
-- Capa de datos: repositorios y contratos en `lib/data/` para encapsular Supabase, errores, loading, scope organizacion/proyecto, mocks temporales y auditoria. Ya cubre proveedores, recursos, cotizaciones multi-proveedor, proyectos, actividad reciente y presupuestos/versiones; las mutaciones críticas de presupuestos y creación de proyectos usan RPCs transaccionales en Postgres. `lib/data/budgets.ts` queda como fachada pública compatible sobre submódulos internos de presupuestos.
+- Capa de datos: repositorios y contratos en `lib/data/` para encapsular Supabase, errores, loading, scope organizacion/proyecto, mocks temporales y auditoria. Ya cubre proveedores, recursos, cotizaciones multi-proveedor, proyectos, organizaciones, invitaciones, actividad reciente y presupuestos/versiones; las mutaciones críticas de presupuestos y creación de proyectos usan RPCs transaccionales en Postgres. `lib/data/budgets.ts` queda como fachada pública compatible sobre submódulos internos de presupuestos.
 - Busqueda global: `lib/search/global.ts` construye resultados navegables para proyectos, partidas, recursos y proveedores desde datos ya autorizados por RLS.
 - Realtime base: utilidades en `lib/realtime/` para topics privados, payloads de actividad, dedupe, debounce y suscripcion Broadcast.
 - Datos persistentes: Supabase preparado en `lib/supabase/`; las pantallas no deben importarlo directamente cuando se conecten a persistencia.
-- Autenticacion: Supabase Auth email/password y OAuth Google opcional con clientes SSR/browser, callback `/auth/callback`, middleware de sesion y onboarding minimo de organizacion/proyecto.
+- Autenticacion: Supabase Auth email/password y OAuth Google opcional con clientes SSR/browser, callback `/auth/callback`, middleware de sesion y onboarding minimo de perfil con organizacion personal automatica.
 - Colaboración futura: Supabase/Postgres será la fuente de verdad para organizaciones, proyectos, borradores, versiones oficiales, auditoría y eventos persistidos.
 - Cálculos: funciones puras para APU y presupuestos en `lib/calculations/`; cronogramas deberá agregar funciones puras para orden topológico, fechas, holgura y ruta crítica.
 - Exportaciones: generación frontend de Excel y vista imprimible en `lib/exports/`.
@@ -171,6 +171,7 @@ La resolución de conflictos vive en `lib/data/`. Las mutaciones editables recib
 - Existe migración `20260521172537_presence_dedicated_topics.sql` que autoriza topics dedicados de Presence (`presence:org:*`, `presence:project:*`) y evita que Realtime reutilice el canal Broadcast ya suscrito para el mismo proyecto/organización.
 - Existe migración `20260522165506_create_project_activity_center.sql` con RPC transaccional para crear proyectos adicionales, membresía admin del creador y auditoría `entity_type = 'proyecto'`.
 - Existe migración `20260525090532_onboarding_profile_workspace.sql` para que onboarding guarde nombre/apellido, actualice `user_profiles.display_name` y cree una organización vacía de ownership sin forzar proyecto inicial.
+- Existe migración `20260525100520_multi_organization_invitations.sql` para distinguir organizaciones `personal | empresa`, resolver organizaciones/proyectos por organización activa, crear empresas, crear proyectos dentro del scope activo e invitar usuarios con varios proyectos seleccionados o acceso automatico a proyectos futuros.
 - Los tipos de Supabase en `lib/supabase/types.ts` se generaron desde la base local con `pnpm run supabase:types`.
 - Las migraciones y `supabase/seed.sql` fueron validadas con `pnpm run supabase:reset` en Supabase local.
 - Existe capa base en `lib/data/` para proveedores, recursos, cotizaciones, partidas/APU, proyectos, actividad y presupuestos. La UI ya consulta y persiste estos módulos en Supabase; cronogramas sigue pendiente de persistencia.
@@ -214,7 +215,7 @@ Cuando llegue la fase final, se creará o enlazará un proyecto Supabase remoto,
 
 ## Performance y reduccion de queries
 
-- `lib/data/workspace.ts` concentra la resolucion de usuario, organizacion activa, proyectos, roles y `DataScope`; las rutas principales reutilizan ese resolver en vez de duplicar el waterfall de auth/membresias.
+- `lib/data/workspace.ts` concentra la resolucion de usuario, organizaciones disponibles, organizacion activa recordada en `localStorage`, proyectos, roles y `DataScope`; las rutas principales reutilizan ese resolver en vez de duplicar el waterfall de auth/membresias.
 - En browser, `lib/data/workspace.ts` cachea la resolucion de workspace por instancia singleton de Supabase e invalida resultados fallidos, para que refetches Realtime y navegacion cliente no repitan `auth.getUser()` + membresias cuando el scope ya fue resuelto.
 - Las rutas principales (`/`, `/proveedores`, `/recursos`, `/partidas`, `/partidas/[id]`, `/presupuestos`, `/presupuestos/[proyectoId]`) usan wrapper Server Component y child cliente para conservar formularios, Presence y mutaciones.
 - `createBrowserClient()` es singleton module-level para no recrear cliente Supabase ni listeners de Auth en cada handler.

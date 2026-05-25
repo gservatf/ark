@@ -42,9 +42,10 @@ export async function createProject(
     return dataFailure(normalizeValidationError(parsed.error));
   }
 
-  const { data, error } = await client.rpc("create_project_with_current_member", {
+  const { data, error } = await client.rpc("create_project_in_organization", {
     cliente: parsed.data.cliente || undefined,
     nombre_proyecto: parsed.data.nombre,
+    p_organizacion_id: scopeResult.data.organizacionId,
     ubicacion: parsed.data.ubicacion || undefined
   });
 

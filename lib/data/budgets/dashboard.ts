@@ -15,7 +15,7 @@ export async function listBudgetDashboardProjects(
   }
 
   const { data: projects, error: projectsError } = await client
-    .rpc("list_budget_dashboard_projects");
+    .rpc("list_budget_dashboard_projects", { p_organizacion_id: scopeResult.data.organizacionId });
 
   if (projectsError) {
     return dataFailure(normalizeSupabaseError(projectsError, "proyectos.dashboardRpc"));

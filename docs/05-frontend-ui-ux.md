@@ -19,7 +19,7 @@ La interfaz debe sentirse como un SaaS profesional para gestiÃ³n de construcci
 
 - `AppLayout`: estructura principal con sidebar, topbar y Ã¡rea de contenido.
 - `Sidebar`: navegaciÃ³n por mÃ³dulos.
-- `Topbar`: navegacion movil, selector real de proyecto, busqueda global navegable, campanita de actividad persistente y usuario activo.
+- `Topbar`: navegacion movil, selector jerarquico de organizacion/proyecto, busqueda global navegable, notificaciones de invitacion, campanita de actividad persistente y menu de perfil.
 - `PageHeader`: cabecera compartida para tÃ­tulo, eyebrow, descripciÃ³n, breadcrumbs, enlace de retorno y acciones.
 - `EmptyState`: estado vacÃ­o compartido para tablas, paneles y vistas sin registros.
 - `LoadingState`: skeleton discreto disponible para futuros flujos con datos persistentes.
@@ -254,3 +254,15 @@ Reglas UX:
 - Los filtros de proveedores, recursos y partidas viven tambien en la URL para soportar refresh/enlaces compartibles. Presupuestos persiste la linea seleccionada con `linea=<id>`.
 - Los formularios principales usan `id`/`htmlFor` explicitos y deshabilitan campos durante guardado para evitar ediciones a medio submit.
 
+## Multi-organizacion
+
+- El Topbar combina selector de organizacion y proyecto en forma de arbol: cada organizacion despliega sus proyectos y la accion de crear proyecto dentro de ese contexto.
+- Cambiar organizacion o proyecto conserva la seccion actual cuando la ruta sigue siendo valida; solo evita quedarse en un detalle de presupuesto que ya no pertenece al contexto seleccionado.
+- `/configuracion/organizaciones` queda enlazado desde el menu de perfil y permite crear organizaciones de empresa, revisar organizaciones disponibles, invitar colaboradores con proyecto opcional y aceptar/rechazar invitaciones recibidas.
+- Las invitaciones usan seleccion multiple de proyectos con checkboxes y una casilla para incluir automaticamente al usuario en proyectos futuros.
+- El campo de correos de invitacion acepta uno o varios correos separados por espacios, comas o saltos de linea, aplicando las mismas propiedades de acceso a todos.
+- Si el rol de organizacion es `Admin`, la UI marca todos los proyectos, activa futuros proyectos y bloquea esas opciones; el rol de proyecto queda como `Admin`.
+- Los roles visibles de proyecto se simplifican a `Lector`, `Editor` y `Admin`.
+- La Configuracion del Sidebar apunta a `/configuracion/proyecto` y queda reservada para ajustes del proyecto activo.
+- El boton de notificaciones del Topbar muestra invitaciones recibidas y permite aceptarlas o rechazarlas sin salir del contexto actual.
+- El dashboard adapta el empty state: en espacios personales invita a crear el primer proyecto; en organizaciones de empresa sin proyectos asignados explica que un owner/admin debe asignar acceso.

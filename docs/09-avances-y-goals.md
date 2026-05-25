@@ -37,7 +37,7 @@ Seguir todos los goals de este documento debe llevar a un MVP completo y colabor
 - `lucide-react`, `zod`, `vitest`, `xlsx` y `@supabase/supabase-js` instalados.
 - Dashboard `/` conectado a Supabase con proyectos accesibles por RLS, versión oficial vigente o borrador activo y enlace a detalle.
 - Creación de proyectos nuevos conectada a Supabase desde dashboard y topbar mediante `create_project_with_current_member`; al crear, navega a `/presupuestos/[proyectoId]`. El dashboard vacío muestra un CTA principal para crear el primer proyecto.
-- Topbar conectado a proyectos reales con selector funcional, búsqueda global navegable y campanita de actividad persistente; se eliminó el botón de correo deshabilitado.
+- Topbar conectado a proyectos reales con selector jerarquico de organizacion/proyecto, búsqueda global navegable, boton de notificaciones para invitaciones y campanita de actividad persistente.
 - Módulo `/reportes` conectado a Supabase con resumen por presupuesto/proyecto, costos por grupo APU, recursos más costosos, totales por estado y distinción visible entre versión oficial y borrador activo.
 - Dashboard y flujo persistente inicial de `/presupuestos` implementados.
 - Layout base creado con `AppLayout`, `Sidebar` y `Topbar`.
@@ -383,3 +383,25 @@ Estado: completado el 2026-05-21.
 Verificacion prevista al cierre: `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm build` y smoke con navegador en rutas principales.
 
 Notas: los modales compartidos tienen semantica/foco/teclado accesible; tablas agregan `scope="col"`; filtros de proveedores, recursos y partidas se reflejan en URL; presupuestos persiste la linea seleccionada; formularios principales usan `id/htmlFor` y bloquean campos durante guardado.
+## Actualizacion 2026-05-25 - Multi-organizacion
+
+- Cada usuario tiene una organizacion personal por defecto y puede crear organizaciones de empresa.
+- El Topbar recuerda la organizacion/proyecto activos por navegador, lista proyectos como carpetas dentro de cada organizacion y crea proyectos mediante `create_project_in_organization`.
+- `/configuracion/organizaciones` permite crear empresas, invitar colaboradores a organizacion con proyecto opcional, revocar/rechazar/aceptar invitaciones y copiar enlaces; Resend envia correo si `RESEND_API_KEY` esta configurado.
+- Verificacion: `supabase db reset`, `supabase test db`, `vitest run`, `tsc --noEmit`, `next lint` y `next build` pasan.
+
+### Ajuste UX multi-organizacion 2026-05-25
+
+- Cambiar organizacion/proyecto desde el selector superior conserva la seccion actual cuando la ruta sigue siendo valida.
+- El menu de perfil enlaza a `Mis organizaciones`; el Sidebar deja `Configuracion` para `/configuracion/proyecto`.
+- Se reintrodujo el boton de notificaciones para invitaciones recibidas, con acciones de aceptar/rechazar.
+- Verificacion: `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm test`, `pnpm build` y smoke con Browser en local.
+
+### Ajuste permisos multi-proyecto 2026-05-25
+
+- Las invitaciones ahora permiten seleccionar varios proyectos actuales y activar inclusion automatica en proximos proyectos.
+- El formulario de invitacion acepta multiples correos separados por espacios, comas o saltos de linea y crea una invitacion individual por correo con los mismos permisos.
+- Los admins de organizacion quedan con todos los proyectos actuales/futuros marcados y bloqueados por defecto.
+- Los roles visibles de proyecto se simplificaron a `Lector`, `Editor` y `Admin`; `presupuestador` queda solo como compatibilidad tecnica en el enum historico.
+- RLS reconoce acceso global a proyectos por miembro de organizacion con rol predeterminado, incluyendo proyectos creados despues de aceptar la invitacion.
+- Verificacion: `pnpm run supabase:reset`, `pnpm run supabase:types`, `pnpm exec supabase test db supabase/tests/rls.sql`, `pnpm exec tsc --noEmit` y smoke con Browser en local.

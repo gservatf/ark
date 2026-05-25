@@ -38,6 +38,8 @@ Recursos -> Partidas/APU -> Presupuestos -> Cronogramas -> Reportes
 - Realtime colaborativo implementado con Broadcast privado desde `activity_events`, Presence efímero y resolución optimista de conflictos con `updated_at`.
 - Primer deploy productivo controlado realizado en Vercel + Supabase remoto: GitHub conectado a Vercel, Supabase remoto enlazado, migraciones/seed aplicados, variables públicas configuradas, Site URL/Redirect URLs de Auth, confirmación de email, SMTP con Resend, CAPTCHA con Cloudflare Turnstile, Google OAuth, reglas fuertes de contraseña, Realtime público desactivado y SSL enforcement remoto aplicados. Todavía quedan checklists remotos para backups y pruebas multiusuario antes de usuarios reales.
 
+- Multi-organizacion implementada: cada usuario conserva una organizacion personal por defecto, puede crear organizaciones de empresa, cambiar organizacion/proyecto activo desde el Topbar con persistencia por navegador, crear proyectos dentro de la organizacion activa y gestionar invitaciones a organizacion con seleccion multiple de proyectos e inclusion automatica en proyectos futuros desde `/configuracion/organizaciones`. El menu de perfil apunta a organizaciones, el Sidebar reserva Configuracion para `/configuracion/proyecto` y las invitaciones aparecen tambien en notificaciones. Las invitaciones se guardan en Supabase y envian correo por Resend si existe `RESEND_API_KEY`. Roles visibles de proyecto: lector, editor y admin.
+
 ## Stack oficial
 
 - Framework: Next.js 14 App Router.
@@ -98,6 +100,8 @@ Variables públicas esperadas en `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-local>
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
+# Opcional server-side para invitaciones de producto con Resend.
+RESEND_API_KEY=<resend-api-key>
 # Opcional si se activa CAPTCHA en Supabase remoto.
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=<turnstile-site-key>
 # Opcional para OAuth Google local si se habilita [auth.external.google].

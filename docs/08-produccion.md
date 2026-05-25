@@ -141,3 +141,9 @@ Estos pasos no se ejecutan en el repo local. Son tareas de configuración en el 
 - [x] Probar CAPTCHA en signup.
 - [ ] Probar colaboración Realtime entre dos usuarios reales.
 - [ ] Verificar que el dashboard remoto reporte 0 errores de auth en las primeras 24h.
+## Multi-organizacion e invitaciones
+
+- Desde 2026-05-25 la app espera `RESEND_API_KEY` solo si se quieren enviar correos de invitacion del producto. Si no existe, las invitaciones siguen funcionando dentro de la app y el enlace se puede copiar desde `/configuracion/organizaciones`.
+- Las invitaciones pueden incluir varios proyectos y acceso automatico a proyectos futuros; antes de produccion validar con al menos un usuario real que el dashboard solo muestre los proyectos permitidos.
+- `NEXT_PUBLIC_APP_URL` se usa para construir links de invitacion (`/configuracion/organizaciones?invite=...`), ademas de redirects de Auth.
+- Antes de invitar usuarios reales, validar en remoto que la migracion `20260525100520_multi_organization_invitations.sql` este aplicada, que `RESEND_API_KEY` exista en Vercel si se requiere correo y que el remitente `notificaciones@polacklabs.com` este autorizado en Resend.

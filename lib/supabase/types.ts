@@ -89,8 +89,84 @@ export type Database = {
           },
         ]
       }
+      organizacion_invitaciones: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          estado: Database["public"]["Enums"]["estado_invitacion"]
+          expires_at: string
+          id: string
+          incluir_proyectos_futuros: boolean
+          invited_by: string
+          organizacion_id: string
+          proyecto_id: string | null
+          proyecto_ids: string[]
+          revoked_at: string | null
+          rol_organizacion: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto: Database["public"]["Enums"]["rol_proyecto"] | null
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          estado?: Database["public"]["Enums"]["estado_invitacion"]
+          expires_at?: string
+          id?: string
+          incluir_proyectos_futuros?: boolean
+          invited_by: string
+          organizacion_id: string
+          proyecto_id?: string | null
+          proyecto_ids?: string[]
+          revoked_at?: string | null
+          rol_organizacion?: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto?: Database["public"]["Enums"]["rol_proyecto"] | null
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          estado?: Database["public"]["Enums"]["estado_invitacion"]
+          expires_at?: string
+          id?: string
+          incluir_proyectos_futuros?: boolean
+          invited_by?: string
+          organizacion_id?: string
+          proyecto_id?: string | null
+          proyecto_ids?: string[]
+          revoked_at?: string | null
+          rol_organizacion?: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto?: Database["public"]["Enums"]["rol_proyecto"] | null
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizacion_invitaciones_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizacion_invitaciones_proyecto_id_fkey"
+            columns: ["proyecto_id"]
+            isOneToOne: false
+            referencedRelation: "proyectos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizacion_miembros: {
         Row: {
+          acceso_todos_proyectos: boolean
           created_at: string
           estado: Database["public"]["Enums"]["estado_miembro"]
           id: string
@@ -98,10 +174,14 @@ export type Database = {
           joined_at: string | null
           organizacion_id: string
           rol: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto_predeterminado:
+            | Database["public"]["Enums"]["rol_proyecto"]
+            | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          acceso_todos_proyectos?: boolean
           created_at?: string
           estado?: Database["public"]["Enums"]["estado_miembro"]
           id?: string
@@ -109,10 +189,14 @@ export type Database = {
           joined_at?: string | null
           organizacion_id: string
           rol?: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto_predeterminado?:
+            | Database["public"]["Enums"]["rol_proyecto"]
+            | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          acceso_todos_proyectos?: boolean
           created_at?: string
           estado?: Database["public"]["Enums"]["estado_miembro"]
           id?: string
@@ -120,6 +204,9 @@ export type Database = {
           joined_at?: string | null
           organizacion_id?: string
           rol?: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto_predeterminado?:
+            | Database["public"]["Enums"]["rol_proyecto"]
+            | null
           updated_at?: string
           user_id?: string
         }
@@ -140,6 +227,7 @@ export type Database = {
           id: string
           nombre: string
           ruc: string | null
+          tipo_organizacion: Database["public"]["Enums"]["tipo_organizacion"]
           updated_at: string
         }
         Insert: {
@@ -148,6 +236,7 @@ export type Database = {
           id?: string
           nombre: string
           ruc?: string | null
+          tipo_organizacion?: Database["public"]["Enums"]["tipo_organizacion"]
           updated_at?: string
         }
         Update: {
@@ -156,6 +245,7 @@ export type Database = {
           id?: string
           nombre?: string
           ruc?: string | null
+          tipo_organizacion?: Database["public"]["Enums"]["tipo_organizacion"]
           updated_at?: string
         }
         Relationships: []
@@ -1585,6 +1675,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          invitacion_id: string
+          organizacion_id: string
+          proyecto_id: string
+        }[]
+      }
+      accept_organization_invitation_by_id: {
+        Args: { p_invitacion_id: string }
+        Returns: {
+          invitacion_id: string
+          organizacion_id: string
+          proyecto_id: string
+        }[]
+      }
       add_draft_partida: {
         Args: { p_draft_id: string; p_partida_id: string }
         Returns: Json
@@ -1601,6 +1707,49 @@ export type Database = {
         Args: { target_project_id: string }
         Returns: boolean
       }
+      complete_user_onboarding: {
+        Args: { apellido_usuario: string; nombre_usuario: string }
+        Returns: {
+          organizacion_id: string
+          organizacion_miembro_id: string
+          perfil_user_id: string
+        }[]
+      }
+      create_organization_for_current_user: {
+        Args: { nombre_org: string; ruc_org?: string }
+        Returns: {
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_registro"]
+          id: string
+          nombre: string
+          ruc: string | null
+          tipo_organizacion: Database["public"]["Enums"]["tipo_organizacion"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizaciones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_organization_invitation: {
+        Args: {
+          p_email: string
+          p_incluir_proyectos_futuros?: boolean
+          p_organizacion_id: string
+          p_proyecto_ids?: string[]
+          p_rol_organizacion?: Database["public"]["Enums"]["rol_organizacion"]
+          p_rol_proyecto?: Database["public"]["Enums"]["rol_proyecto"]
+        }
+        Returns: {
+          email: string
+          expires_at: string
+          invitacion_id: string
+          organizacion_id: string
+          token: string
+        }[]
+      }
       create_organization_with_owner: {
         Args: {
           cliente?: string
@@ -1616,13 +1765,32 @@ export type Database = {
           proyecto_miembro_id: string
         }[]
       }
-      complete_user_onboarding: {
-        Args: { apellido_usuario: string; nombre_usuario: string }
+      create_project_in_organization: {
+        Args: {
+          cliente?: string
+          nombre_proyecto: string
+          p_organizacion_id: string
+          ubicacion?: string
+        }
         Returns: {
+          cliente: string | null
+          codigo: string | null
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          estado: Database["public"]["Enums"]["estado_proyecto"]
+          id: string
+          nombre: string
           organizacion_id: string
-          organizacion_miembro_id: string
-          perfil_user_id: string
-        }[]
+          ubicacion: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proyectos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_project_with_current_member: {
         Args: { cliente?: string; nombre_proyecto: string; ubicacion?: string }
@@ -1647,9 +1815,17 @@ export type Database = {
         }
       }
       current_user_id: { Args: never; Returns: string }
+      current_verified_email: { Args: never; Returns: string }
       emit_official_budget_version: {
         Args: { p_draft_id: string; p_expected_updated_at: string }
         Returns: Json
+      }
+      ensure_personal_organization_for_current_user: {
+        Args: { display_name?: string }
+        Returns: {
+          organizacion_id: string
+          organizacion_miembro_id: string
+        }[]
       }
       is_organization_admin: {
         Args: { target_organization_id: string }
@@ -1678,7 +1854,16 @@ export type Database = {
         }
         Returns: boolean
       }
-      list_budget_dashboard_projects: { Args: never; Returns: Json }
+      list_budget_dashboard_projects: {
+        Args: { p_organizacion_id?: string }
+        Returns: Json
+      }
+      list_received_organization_invitations: { Args: never; Returns: Json }
+      list_sent_organization_invitations: {
+        Args: { p_organizacion_id: string }
+        Returns: Json
+      }
+      list_workspace_organizations: { Args: never; Returns: Json }
       project_belongs_to_organization: {
         Args: { target_organization_id: string; target_project_id: string }
         Returns: boolean
@@ -1695,8 +1880,80 @@ export type Database = {
         Args: { p_resource_ids: string[] }
         Returns: Json
       }
+      regenerate_organization_invitation_token: {
+        Args: { p_invitacion_id: string }
+        Returns: {
+          email: string
+          expires_at: string
+          invitacion_id: string
+          organizacion_id: string
+          token: string
+        }[]
+      }
+      reject_organization_invitation: {
+        Args: { p_invitacion_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          estado: Database["public"]["Enums"]["estado_invitacion"]
+          expires_at: string
+          id: string
+          incluir_proyectos_futuros: boolean
+          invited_by: string
+          organizacion_id: string
+          proyecto_id: string | null
+          proyecto_ids: string[]
+          revoked_at: string | null
+          rol_organizacion: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto: Database["public"]["Enums"]["rol_proyecto"] | null
+          token_hash: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizacion_invitaciones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revoke_organization_invitation: {
+        Args: { p_invitacion_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          estado: Database["public"]["Enums"]["estado_invitacion"]
+          expires_at: string
+          id: string
+          incluir_proyectos_futuros: boolean
+          invited_by: string
+          organizacion_id: string
+          proyecto_id: string | null
+          proyecto_ids: string[]
+          revoked_at: string | null
+          rol_organizacion: Database["public"]["Enums"]["rol_organizacion"]
+          rol_proyecto: Database["public"]["Enums"]["rol_proyecto"] | null
+          token_hash: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizacion_invitaciones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
+      estado_invitacion:
+        | "pendiente"
+        | "aceptada"
+        | "rechazada"
+        | "revocada"
+        | "expirada"
       estado_miembro: "activo" | "invitado" | "suspendido"
       estado_presupuesto: "borrador" | "aprobado" | "archivado"
       estado_presupuesto_borrador: "activo" | "cerrado" | "archivado"
@@ -1708,6 +1965,7 @@ export type Database = {
       precio_origen: "catalogo" | "manual" | "snapshot"
       rol_organizacion: "owner" | "admin" | "miembro"
       rol_proyecto: "admin" | "presupuestador" | "editor" | "lector"
+      tipo_organizacion: "personal" | "empresa"
       tipo_recurso: "material" | "mano_obra" | "equipo" | "herramienta"
     }
     CompositeTypes: {
@@ -1836,6 +2094,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      estado_invitacion: [
+        "pendiente",
+        "aceptada",
+        "rechazada",
+        "revocada",
+        "expirada",
+      ],
       estado_miembro: ["activo", "invitado", "suspendido"],
       estado_presupuesto: ["borrador", "aprobado", "archivado"],
       estado_presupuesto_borrador: ["activo", "cerrado", "archivado"],
@@ -1847,6 +2112,7 @@ export const Constants = {
       precio_origen: ["catalogo", "manual", "snapshot"],
       rol_organizacion: ["owner", "admin", "miembro"],
       rol_proyecto: ["admin", "presupuestador", "editor", "lector"],
+      tipo_organizacion: ["personal", "empresa"],
       tipo_recurso: ["material", "mano_obra", "equipo", "herramienta"],
     },
   },

@@ -1,24 +1,26 @@
-# Modelo de Datos
+﻿# Modelo de Datos
 
 ## Estado actual
 
-El modelo de datos está documentado y preparado en SQL. La UI ya lo usa como backend real para proveedores, recursos, cotizaciones, partidas/APU y presupuestos; cronogramas sigue pendiente de persistencia real.
+El modelo de datos estÃ¡ documentado y preparado en SQL. La UI ya lo usa como backend real para proveedores, recursos, cotizaciones, partidas/APU y presupuestos; cronogramas sigue pendiente de persistencia real.
 
-- La migración inicial vive en `supabase/migrations/20260514000000_initial_schema.sql`.
-- La migración colaborativa vive en `supabase/migrations/20260515000000_collaborative_model.sql`.
+- La migraciÃ³n inicial vive en `supabase/migrations/20260514000000_initial_schema.sql`.
+- La migraciÃ³n colaborativa vive en `supabase/migrations/20260515000000_collaborative_model.sql`.
 - El seed inicial vive en `supabase/seed.sql` e incluye datos demo para el modelo colaborativo.
 - Los tipos de dominio frontend viven en `types/domain.ts`.
 - Los tipos Supabase generados desde la base local viven en `lib/supabase/types.ts`.
-- Supabase CLI local y Docker están configurados para desarrollo local-first.
+- Supabase CLI local y Docker estÃ¡n configurados para desarrollo local-first.
 - Auth/RLS vive en `supabase/migrations/20260518000000_auth_rls_ownership.sql`.
 - Las pruebas pgTAP de aislamiento viven en `supabase/tests/rls.sql`.
 - Las migraciones y el seed fueron validados contra Supabase local con `pnpm run supabase:reset`.
-- La estrategia acordada sigue siendo ejecutar primero migraciones y seed contra Supabase local; el proyecto remoto se usará recién para staging, producción o migración final.
+- La estrategia acordada sigue siendo ejecutar primero migraciones y seed contra Supabase local; el proyecto remoto se usarÃ¡ reciÃ©n para staging, producciÃ³n o migraciÃ³n final.
 - El modelo multi-proveedor vive en `supabase/migrations/20260519155643_multi_provider_client_prices.sql` e incluye `proveedores.disponible_para_cliente`, `recurso_proveedor_precios`, campos vivos de precio cliente en borradores y snapshots de cotizaciones en versiones oficiales.
-- La integridad transaccional de presupuestos vive en `supabase/migrations/20260520150000_budget_integrity_transactions.sql`: agrega RPCs para emitir versiones oficiales y agregar partidas, endurece trazabilidad de borradores, bloquea cambios de organización en proyectos y valida auditoría/onboarding.
-- El hardening de producción web/Auth vive en `supabase/migrations/20260520164133_chunk3_auth_web_security_hardening.sql`: ajusta `set_updated_at`, reemplaza grants globales por grants explícitos y limita payloads de auditoría.
-- La creación de proyectos post-onboarding vive en `supabase/migrations/20260522165506_create_project_activity_center.sql`: agrega `create_project_with_current_member`, registra auditoría `proyecto` y habilita el centro de actividad persistente.
-- El onboarding personal vive en `supabase/migrations/20260525090532_onboarding_profile_workspace.sql`: agrega `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar el nombre visible del usuario y crear una organización vacía sin proyecto inicial.
+- La integridad transaccional de presupuestos vive en `supabase/migrations/20260520150000_budget_integrity_transactions.sql`: agrega RPCs para emitir versiones oficiales y agregar partidas, endurece trazabilidad de borradores, bloquea cambios de organizaciÃ³n en proyectos y valida auditorÃ­a/onboarding.
+- El hardening de producciÃ³n web/Auth vive en `supabase/migrations/20260520164133_chunk3_auth_web_security_hardening.sql`: ajusta `set_updated_at`, reemplaza grants globales por grants explÃ­citos y limita payloads de auditorÃ­a.
+- La creaciÃ³n de proyectos post-onboarding vive en `supabase/migrations/20260522165506_create_project_activity_center.sql`: agrega `create_project_with_current_member`, registra auditorÃ­a `proyecto` y habilita el centro de actividad persistente.
+- El onboarding personal vive en `supabase/migrations/20260525090532_onboarding_profile_workspace.sql`: agrega `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar el nombre visible del usuario y crear una organizaciÃ³n vacÃ­a sin proyecto inicial.
+
+- Multi-organizacion 2026-05-25: `supabase/migrations/20260525100520_multi_organization_invitations.sql` agrega `tipo_organizacion`, `organizacion_invitaciones`, `create_organization_for_current_user`, `create_project_in_organization`, `list_workspace_organizations`, `list_budget_dashboard_projects(p_organizacion_id)` e invitaciones a organizacion con seleccion multiple de proyectos.
 
 ## Contratos de capa de datos
 
@@ -35,16 +37,19 @@ Reglas actuales:
 
 - Proveedores se listan, obtienen, crean, actualizan y desactivan con `organizacion_id = scope.organizacionId`.
 - Recursos se listan, obtienen, crean, actualizan y desactivan con `estado = 'inactivo'`.
-- Cotizaciones por recurso/proveedor se gestionan en `lib/data/quotes.ts` con scope de organización, validación Zod, preferido interno único por recurso y auditoría.
+- Cotizaciones por recurso/proveedor se gestionan en `lib/data/quotes.ts` con scope de organizaciÃ³n, validaciÃ³n Zod, preferido interno Ãºnico por recurso y auditorÃ­a.
 - Partidas/APU se gestionan en `lib/data/items.ts`: lista, crea, edita y desactiva partidas, persiste recursos APU, recalcula parciales y registra auditoria.
-- Presupuestos se gestionan en `lib/data/budgets.ts`: lista dashboard persistente, asegura/crea borrador activo por proyecto, edita datos generales, agrega partidas por RPC, edita metrados, elimina líneas, refresca precios vigentes, fija precios por línea/recurso, resuelve o selecciona precios cliente, aplica override manual y emite versiones oficiales congeladas por RPC.
+- Presupuestos se gestionan en `lib/data/budgets.ts`: lista dashboard persistente, asegura/crea borrador activo por proyecto, edita datos generales, agrega partidas por RPC, edita metrados, elimina lÃ­neas, refresca precios vigentes, fija precios por lÃ­nea/recurso, resuelve o selecciona precios cliente, aplica override manual y emite versiones oficiales congeladas por RPC.
 - Proyectos se gestionan en `lib/data/projects.ts`: lista proyectos accesibles del workspace y crea proyectos mediante la RPC transaccional `create_project_with_current_member`.
+- El flujo nuevo de proyectos usa `create_project_in_organization(p_organizacion_id, nombre_proyecto, cliente, ubicacion)` para respetar la organizacion activa recordada por navegador.
+- Organizaciones e invitaciones se gestionan en `lib/data/organizations.ts`; las invitaciones guardan token hasheado, estado, expiracion, proyectos seleccionados e inclusion automatica en proyectos futuros, y se aceptan solo con el correo verificado del usuario autenticado.
+- `organizacion_miembros.acceso_todos_proyectos` y `rol_proyecto_predeterminado` permiten que un miembro acceda a todos los proyectos actuales/futuros sin convertirlo en admin de organizacion.
 - Actividad reciente se consulta desde `lib/data/activity.ts`, leyendo `activity_events` bajo RLS para la campanita del topbar.
 - Al cambiar costo unitario o transporte de un recurso se registra `recurso_precios_historial` y tambien `activity_events`.
-- `createResourceCatalogPriceChange` describe el cambio de precio del catalogo, `canAutoUpdateDraftResourcePrice` cubre el contrato de recursos y `shouldAutoUpdateDraftResourcePrice` aplica la regla real en presupuestos: solo recursos del mismo catálogo, dentro de líneas no fijadas, con `autoactualizar_precio = true`, `precio_fijado = false` y `precio_origen = 'catalogo'`.
+- `createResourceCatalogPriceChange` describe el cambio de precio del catalogo, `canAutoUpdateDraftResourcePrice` cubre el contrato de recursos y `shouldAutoUpdateDraftResourcePrice` aplica la regla real en presupuestos: solo recursos del mismo catÃ¡logo, dentro de lÃ­neas no fijadas, con `autoactualizar_precio = true`, `precio_fijado = false` y `precio_origen = 'catalogo'`.
 - Los mocks siguen disponibles mediante adaptadores explicitos para transicion temporal.
 
-## Tablas mínimas
+## Tablas mÃ­nimas
 
 - `proveedores`
 - `recursos`
@@ -73,32 +78,32 @@ Reglas actuales:
 
 ## Modelo colaborativo
 
-El modelo colaborativo ya tiene RLS productivo activado sobre todas las tablas públicas. `anon` no tiene acceso por policies; `authenticated` solo puede consultar o escribir dentro de organizaciones/proyectos donde tenga membresía activa. Las funciones `security definer` `is_organization_member`, `is_organization_admin`, `is_project_member`, `is_project_admin`, `can_read_project`, `can_edit_project`, `can_emit_project` y `project_belongs_to_organization` centralizan las reglas para evitar acceso cruzado y recursión de policies.
+El modelo colaborativo ya tiene RLS productivo activado sobre todas las tablas pÃºblicas. `anon` no tiene acceso por policies; `authenticated` solo puede consultar o escribir dentro de organizaciones/proyectos donde tenga membresÃ­a activa. Las funciones `security definer` `is_organization_member`, `is_organization_admin`, `is_project_member`, `is_project_admin`, `can_read_project`, `can_edit_project`, `can_emit_project` y `project_belongs_to_organization` centralizan las reglas para evitar acceso cruzado y recursiÃ³n de policies.
 
-El onboarding nuevo usa la RPC `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar `user_profiles.display_name` y crear automáticamente una organización vacía con el usuario como `owner`. No crea proyecto inicial; el dashboard vacío muestra una llamada a crear el primer proyecto.
+El onboarding nuevo usa la RPC `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar `user_profiles.display_name` y crear automÃ¡ticamente una organizaciÃ³n vacÃ­a con el usuario como `owner`. No crea proyecto inicial; el dashboard vacÃ­o muestra una llamada a crear el primer proyecto.
 
-`user_profiles.display_name` no es único ni se usa para permisos. Pueden existir usuarios con el mismo nombre y apellido; la identidad confiable para auditoría, ownership y colaboración sigue siendo `auth.users.id`/`actor_id`. Cuando la UI necesite desambiguar personas, debe mostrar un dato adicional permitido, como correo verificado o contexto de membresía.
+`user_profiles.display_name` no es Ãºnico ni se usa para permisos. Pueden existir usuarios con el mismo nombre y apellido; la identidad confiable para auditorÃ­a, ownership y colaboraciÃ³n sigue siendo `auth.users.id`/`actor_id`. Cuando la UI necesite desambiguar personas, debe mostrar un dato adicional permitido, como correo verificado o contexto de membresÃ­a.
 
 La RPC legacy `create_organization_with_owner(nombre_org, ruc_org, nombre_proyecto, cliente, ubicacion)` queda disponible para compatibilidad, pero ya no es el flujo principal de onboarding.
 
-La RPC de onboarding rechaza usuarios que ya tienen una membresía activa y valida que el RUC, cuando existe, cumpla `^[0-9]{11}$` antes de insertar.
+La RPC de onboarding rechaza usuarios que ya tienen una membresÃ­a activa y valida que el RUC, cuando existe, cumpla `^[0-9]{11}$` antes de insertar.
 
-La RPC `create_project_with_current_member(nombre_proyecto, cliente, ubicacion)` permite que un `owner` o `admin` de organización cree proyectos adicionales dentro de su organización activa. La función crea el proyecto, asigna al creador como `admin` de proyecto y registra `activity_events.entity_type = 'proyecto'`.
+La RPC `create_project_with_current_member(nombre_proyecto, cliente, ubicacion)` permite que un `owner` o `admin` de organizaciÃ³n cree proyectos adicionales dentro de su organizaciÃ³n activa. La funciÃ³n crea el proyecto, asigna al creador como `admin` de proyecto y registra `activity_events.entity_type = 'proyecto'`.
 
-Antes de conectar CRUDs reales o colaboración realtime se agregó un modelo de ownership y auditoría en una migración versionada. La dirección aprobada es:
+Antes de conectar CRUDs reales o colaboraciÃ³n realtime se agregÃ³ un modelo de ownership y auditorÃ­a en una migraciÃ³n versionada. La direcciÃ³n aprobada es:
 
-- `organizaciones`: agrupa usuarios, proyectos y permisos.
-- `organizacion_miembros`: usuarios dentro de una organización con rol base `owner | admin | miembro` y estado `activo | invitado | suspendido`.
-- `user_profiles`: perfil confiable derivado de `auth.users` para mostrar identidad en colaboración; se sincroniza por trigger privado y no se edita desde cliente.
-- `proyectos`: unidad principal de colaboración y reporting.
-- `proyecto_miembros`: miembros y roles específicos por proyecto `admin | presupuestador | editor | lector`.
-- `activity_events`: auditoría permanente de cambios.
+- `organizaciones`: agrupa usuarios, proyectos y permisos; `tipo_organizacion` distingue espacios `personal` y organizaciones `empresa`.
+- `organizacion_miembros`: usuarios dentro de una organizaciÃ³n con rol base `owner | admin | miembro` y estado `activo | invitado | suspendido`.
+- `user_profiles`: perfil confiable derivado de `auth.users` para mostrar identidad en colaboraciÃ³n; se sincroniza por trigger privado y no se edita desde cliente.
+- `proyectos`: unidad principal de colaboraciÃ³n y reporting.
+- `proyecto_miembros`: miembros y roles especÃ­ficos por proyecto `admin | presupuestador | editor | lector`.
+- `activity_events`: auditorÃ­a permanente de cambios.
 - `presupuesto_borradores`: espacio colaborativo vivo por proyecto.
 - `presupuesto_versiones`: versiones oficiales congeladas.
-- `presupuesto_borrador_partidas` y `presupuesto_borrador_partida_recursos`: líneas vivas con control de precio autoactualizable o fijado.
+- `presupuesto_borrador_partidas` y `presupuesto_borrador_partida_recursos`: lÃ­neas vivas con control de precio autoactualizable o fijado.
 - `presupuesto_version_partidas` y `presupuesto_version_partida_recursos`: snapshots oficiales congelados.
 
-`activity_events` debe registrar como mínimo:
+`activity_events` debe registrar como mÃ­nimo:
 
 - `id`
 - `organizacion_id`
@@ -114,20 +119,20 @@ Antes de conectar CRUDs reales o colaboración realtime se agregó un modelo de 
 - `changed_fields` como `jsonb`
 - `created_at`
 
-Los campos JSON de auditoría (`before`, `after`, `changed_fields`, `metadata`) tienen límite de 50000 caracteres serializados por campo.
+Los campos JSON de auditorÃ­a (`before`, `after`, `changed_fields`, `metadata`) tienen lÃ­mite de 50000 caracteres serializados por campo.
 
-El historial especializado `recurso_precios_historial` se mantiene para análisis de precios, pero no reemplaza la auditoría general.
+El historial especializado `recurso_precios_historial` se mantiene para anÃ¡lisis de precios, pero no reemplaza la auditorÃ­a general.
 
 Reglas RLS actuales:
 
-- `owner` y `admin` de organización administran la organización y todos sus proyectos.
+- `owner` y `admin` de organizaciÃ³n administran la organizaciÃ³n y todos sus proyectos.
 - `admin` de proyecto administra miembros del proyecto, edita borradores y puede emitir versiones oficiales.
 - `presupuestador` edita borradores y puede emitir versiones oficiales.
 - `editor` edita borradores, pero no emite versiones oficiales.
 - `lector` solo puede leer datos del proyecto.
-- Las versiones oficiales permiten lectura e inserción autorizada, pero no `update` ni `delete` desde clientes autenticados.
-- `activity_events` exige `actor_id = auth.uid()`, permisos sobre la organización/proyecto informado, `entity_type` dentro de la whitelist inicial y existencia/scope válido de `entity_id`.
-- `user_profiles` permite leer el perfil propio y perfiles de miembros activos con organización compartida; no permite escrituras directas desde clientes.
+- Las versiones oficiales permiten lectura e inserciÃ³n autorizada, pero no `update` ni `delete` desde clientes autenticados.
+- `activity_events` exige `actor_id = auth.uid()`, permisos sobre la organizaciÃ³n/proyecto informado, `entity_type` dentro de la whitelist inicial y existencia/scope vÃ¡lido de `entity_id`.
+- `user_profiles` permite leer el perfil propio y perfiles de miembros activos con organizaciÃ³n compartida; no permite escrituras directas desde clientes.
 
 ## Borradores, precios fijados y versiones
 
@@ -136,28 +141,28 @@ El borrador colaborativo representa el trabajo activo. Puede recalcular con prec
 Reglas persistidas:
 
 - Un proyecto puede tener un solo borrador activo.
-- Si el usuario abre un proyecto sin borrador y tiene permiso de edición, la capa de datos crea un borrador activo con nombre `NombreProyecto_Presupuesto`, cliente/ubicación del proyecto y porcentajes por defecto.
+- Si el usuario abre un proyecto sin borrador y tiene permiso de ediciÃ³n, la capa de datos crea un borrador activo con nombre `NombreProyecto_Presupuesto`, cliente/ubicaciÃ³n del proyecto y porcentajes por defecto.
 - Los borradores guardan `created_by`/`updated_by` con default `auth.uid()` y las policies de insert/update exigen que coincidan con el usuario autenticado.
 - `precio_fijado = true` obliga `autoactualizar_precio = false`.
 - `precio_origen` usa `catalogo | manual | snapshot`.
 - Los totales del borrador son valores persistidos que deben recalcularse desde la capa de datos y funciones puras, no desde componentes visuales.
-- El refresco de precios vigentes se ejecuta al cambiar recursos/cotizaciones del catálogo y también desde un botón manual en `/presupuestos`.
-- La selección de precio cliente puede ser automática, una cotización específica o un override manual; al emitir versión oficial se congela la selección vigente sin recalcularla.
+- El refresco de precios vigentes se ejecuta al cambiar recursos/cotizaciones del catÃ¡logo y tambiÃ©n desde un botÃ³n manual en `/presupuestos`.
+- La selecciÃ³n de precio cliente puede ser automÃ¡tica, una cotizaciÃ³n especÃ­fica o un override manual; al emitir versiÃ³n oficial se congela la selecciÃ³n vigente sin recalcularla.
 
-Para controlar cambios automáticos, las líneas o recursos del borrador soportan:
+Para controlar cambios automÃ¡ticos, las lÃ­neas o recursos del borrador soportan:
 
-- `precio_fijado`: indica que la línea no debe autoactualizarse con cambios del catálogo.
+- `precio_fijado`: indica que la lÃ­nea no debe autoactualizarse con cambios del catÃ¡logo.
 - `motivo_precio_fijado`: nota opcional para explicar el bloqueo.
-- `precio_origen`: catálogo, manual o snapshot.
+- `precio_origen`: catÃ¡logo, manual o snapshot.
 - `updated_at` como base para detectar conflictos optimistas en la capa de datos.
 
-Las versiones oficiales son snapshots formales. Conservan los valores exactos emitidos, no se recalculan con precios actuales y podrán compararse/restaurarse creando un nuevo borrador o una nueva versión.
+Las versiones oficiales son snapshots formales. Conservan los valores exactos emitidos, no se recalculan con precios actuales y podrÃ¡n compararse/restaurarse creando un nuevo borrador o una nueva versiÃ³n.
 
 El nombre oficial se construye como `NombreProyecto_Presupuesto_V{n}`. Si el borrador ya termina en `_Presupuesto`, no se duplica el sufijo.
 
-La emisión oficial usa `emit_official_budget_version(p_draft_id, p_expected_updated_at)`: bloquea el borrador con `FOR UPDATE`, valida permisos de emisión, estado activo, `updated_at` esperado y líneas existentes; calcula `numero_version` dentro de la transacción, inserta cabecera/líneas/recursos con `INSERT ... SELECT`, audita y devuelve `{ version, lines, resources }`.
+La emisiÃ³n oficial usa `emit_official_budget_version(p_draft_id, p_expected_updated_at)`: bloquea el borrador con `FOR UPDATE`, valida permisos de emisiÃ³n, estado activo, `updated_at` esperado y lÃ­neas existentes; calcula `numero_version` dentro de la transacciÃ³n, inserta cabecera/lÃ­neas/recursos con `INSERT ... SELECT`, audita y devuelve `{ version, lines, resources }`.
 
-Agregar partidas al borrador usa `add_draft_partida(p_draft_id, p_partida_id)`: bloquea el borrador, valida permiso de edición, calcula `orden`, toma snapshots APU y precios cliente con proveedores/cotizaciones vigentes, recalcula totales y audita en una sola transacción.
+Agregar partidas al borrador usa `add_draft_partida(p_draft_id, p_partida_id)`: bloquea el borrador, valida permiso de ediciÃ³n, calcula `orden`, toma snapshots APU y precios cliente con proveedores/cotizaciones vigentes, recalcula totales y audita en una sola transacciÃ³n.
 
 Las tablas de versiones oficiales incluyen campos preparados para congelar precio interno y precio cliente:
 
@@ -167,7 +172,7 @@ Las tablas de versiones oficiales incluyen campos preparados para congelar preci
 - `precio_cliente_origen_snapshot`
 - `precio_cliente_advertencia_snapshot`
 
-Las migraciones usan IDs `uuid` con `gen_random_uuid()`, enums PostgreSQL, timestamps `created_at`/`updated_at`, checks para montos y porcentajes no negativos, foreign keys e índices básicos. La migración colaborativa agrega `organizacion_id` nullable en tablas legacy para preparar ownership sin romper seed ni UI mock.
+Las migraciones usan IDs `uuid` con `gen_random_uuid()`, enums PostgreSQL, timestamps `created_at`/`updated_at`, checks para montos y porcentajes no negativos, foreign keys e Ã­ndices bÃ¡sicos. La migraciÃ³n colaborativa agrega `organizacion_id` nullable en tablas legacy para preparar ownership sin romper seed ni UI mock.
 
 ## Flujo de migraciones local-first
 
@@ -215,13 +220,13 @@ Campos:
 - `created_at`
 - `updated_at`
 
-En el modelo persistente real, `recursos` debe representar el catálogo canónico. No se deben duplicar recursos solo porque varios proveedores ofrecen el mismo material. La relación de precios por proveedor debe salir de una tabla de cotizaciones.
+En el modelo persistente real, `recursos` debe representar el catÃ¡logo canÃ³nico. No se deben duplicar recursos solo porque varios proveedores ofrecen el mismo material. La relaciÃ³n de precios por proveedor debe salir de una tabla de cotizaciones.
 
-En el CRUD persistente actual, `proveedor_id` representa el proveedor actual o preferente del recurso como compatibilidad temporal. El recurso sigue siendo canónico y las cotizaciones viven fuera de `recursos`, en `recurso_proveedor_precios`.
+En el CRUD persistente actual, `proveedor_id` representa el proveedor actual o preferente del recurso como compatibilidad temporal. El recurso sigue siendo canÃ³nico y las cotizaciones viven fuera de `recursos`, en `recurso_proveedor_precios`.
 
 ## Cotizaciones por proveedor
 
-La tabla `recurso_proveedor_precios` permite que un mismo recurso tenga múltiples precios por proveedor.
+La tabla `recurso_proveedor_precios` permite que un mismo recurso tenga mÃºltiples precios por proveedor.
 
 Campos conceptuales:
 
@@ -245,13 +250,13 @@ En el CRUD persistente, `codigo` es unico por organizacion. Las partidas se desa
 
 Reglas:
 
-- El precio interno del borrador puede usar una cotización seleccionada por el equipo.
+- El precio interno del borrador puede usar una cotizaciÃ³n seleccionada por el equipo.
 - El precio cliente se calcula desde cotizaciones de proveedores con `disponible_para_cliente = true`.
-- Si hay varias cotizaciones visibles para cliente, se propone automáticamente la más cara.
-- El usuario puede cambiar manualmente el precio cliente antes de emitir una versión oficial; el override guarda precio total unitario, origen `override_manual` y motivo opcional.
-- Si no hay cotización de proveedor visible para cliente, se usa el precio más alto de la base general y se registra advertencia.
-- El precio cliente automático compara `costo_unitario + costo_transporte`.
-- La versión oficial congela `cotizacion_interna_id_snapshot`, `cotizacion_cliente_id_snapshot`, `precio_cliente_snapshot`, `precio_cliente_origen_snapshot` y `precio_cliente_advertencia_snapshot`.
+- Si hay varias cotizaciones visibles para cliente, se propone automÃ¡ticamente la mÃ¡s cara.
+- El usuario puede cambiar manualmente el precio cliente antes de emitir una versiÃ³n oficial; el override guarda precio total unitario, origen `override_manual` y motivo opcional.
+- Si no hay cotizaciÃ³n de proveedor visible para cliente, se usa el precio mÃ¡s alto de la base general y se registra advertencia.
+- El precio cliente automÃ¡tico compara `costo_unitario + costo_transporte`.
+- La versiÃ³n oficial congela `cotizacion_interna_id_snapshot`, `cotizacion_cliente_id_snapshot`, `precio_cliente_snapshot`, `precio_cliente_origen_snapshot` y `precio_cliente_advertencia_snapshot`.
 
 ## Historial de precios
 
@@ -272,7 +277,7 @@ Campos:
 
 ## Partidas/APU
 
-`partidas` contiene la cabecera técnica:
+`partidas` contiene la cabecera tÃ©cnica:
 
 - `id`
 - `codigo`
@@ -349,7 +354,7 @@ Las partidas no guardan gastos generales ni utilidad propios. Esos porcentajes p
 
 `presupuesto_partida_recursos` congela el APU completo usado en el presupuesto. Se incluye desde el MVP para preservar trazabilidad.
 
-Las versiones oficiales deberán congelar tanto el precio interno como el precio cliente. El snapshot cliente debe permitir reproducir la exportación para cliente aunque cambien proveedores o cotizaciones después.
+Las versiones oficiales deberÃ¡n congelar tanto el precio interno como el precio cliente. El snapshot cliente debe permitir reproducir la exportaciÃ³n para cliente aunque cambien proveedores o cotizaciones despuÃ©s.
 
 Campos snapshot principales:
 
@@ -370,7 +375,7 @@ Campos snapshot principales:
 - `precio_cliente_snapshot`
 - `cotizacion_cliente_id_snapshot`
 - `precio_cliente_origen_snapshot`: proveedor visible, fallback general u override manual.
-- `precio_cliente_advertencia_snapshot`: nota cuando faltó referencia de proveedor visible para cliente.
+- `precio_cliente_advertencia_snapshot`: nota cuando faltÃ³ referencia de proveedor visible para cliente.
 - `grupo`
 - `cantidad`
 - `unidad`
@@ -381,13 +386,13 @@ Campos snapshot principales:
 
 ## Cronogramas
 
-El primer módulo de cronogramas será mock/frontend antes de Supabase. El modelo persistente se diseñará cuando se migren presupuestos y cronogramas a backend real.
+El primer mÃ³dulo de cronogramas serÃ¡ mock/frontend antes de Supabase. El modelo persistente se diseÃ±arÃ¡ cuando se migren presupuestos y cronogramas a backend real.
 
-Relación conceptual:
+RelaciÃ³n conceptual:
 
 - Un cronograma pertenece a un proyecto y normalmente nace desde un presupuesto o borrador.
 - Cada partida presupuestada puede convertirse en una tarea de cronograma.
-- La tarea conserva referencia a la partida/línea origen cuando exista, pero puede tener campos propios de planificación.
+- La tarea conserva referencia a la partida/lÃ­nea origen cuando exista, pero puede tener campos propios de planificaciÃ³n.
 - Las dependencias MVP son fin-a-inicio entre tareas.
 
 Campos conceptuales de `cronogramas`:
@@ -406,7 +411,7 @@ Campos conceptuales de `cronograma_tareas`:
 
 - `id`
 - `cronograma_id`
-- `presupuesto_partida_id` o referencia equivalente a línea de borrador.
+- `presupuesto_partida_id` o referencia equivalente a lÃ­nea de borrador.
 - `partida_id`
 - `codigo_snapshot`
 - `nombre_snapshot`
@@ -428,9 +433,9 @@ Campos conceptuales de `cronograma_dependencias`:
 - `tarea_sucesora_id`
 - `tipo`: `fin_inicio` en MVP.
 
-Si una partida no tiene rendimiento usable, la tarea debe permitir `duracion_origen = manual` y exigir `duracion_dias`. La ausencia de rendimiento no debe bloquear la creación de partidas/APU, pero sí debe impedir calcular un cronograma completo hasta que la duración manual exista.
+Si una partida no tiene rendimiento usable, la tarea debe permitir `duracion_origen = manual` y exigir `duracion_dias`. La ausencia de rendimiento no debe bloquear la creaciÃ³n de partidas/APU, pero sÃ­ debe impedir calcular un cronograma completo hasta que la duraciÃ³n manual exista.
 
-## Índices recomendados
+## Ãndices recomendados
 
 - Recursos: `nombre`, `tipo`, `proveedor_id`, `estado`.
 - Cotizaciones por proveedor: `recurso_id`, `proveedor_id`, `estado`, `fecha_cotizacion`, `vigente_hasta`.
@@ -441,7 +446,7 @@ Si una partida no tiene rendimiento usable, la tarea debe permitir `duracion_ori
 - Tareas de cronograma: `cronograma_id`, `partida_id`, `orden`, `es_ruta_critica`.
 - Historial: `recurso_id`, `fecha`.
 
-## Seed data Perú
+## Seed data PerÃº
 
 Recursos iniciales:
 
@@ -453,7 +458,7 @@ Recursos iniciales:
 - Maestro de obra.
 - Operario.
 - Oficial.
-- Peón.
+- PeÃ³n.
 - Mezcladora 9 - 11 p3.
 - Herramientas manuales.
 
@@ -461,7 +466,7 @@ Partidas iniciales:
 
 - Tarrajeo en muros interiores.
 - Piso porcelanato 60x60.
-- Pintura látex en muros y cielos.
+- Pintura lÃ¡tex en muros y cielos.
 - Muro drywall e=12.5mm.
 - Puerta de madera contraplacada.
 - Concreto f'c=210 kg/cm2.
@@ -470,7 +475,7 @@ Presupuesto demo:
 
 - Proyecto: Edificio Multifamiliar Los Olivos.
 - Cliente: Cliente Demo.
-- Ubicación: Lima, Perú.
+- UbicaciÃ³n: Lima, PerÃº.
 
 ## RPCs de performance de presupuestos
 

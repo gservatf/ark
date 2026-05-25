@@ -2,18 +2,24 @@
 
 import {
   Bell,
+  BriefcaseBusiness,
   Building2,
   ChevronDown,
   FilePlus2,
+  Folder,
   LogOut,
+  Mail,
   Menu,
-  Search
+  Search,
+  Settings,
+  UserCircle
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ActivityPanel } from "@/components/layout/ActivityPanel";
+import { InvitationNotificationsPanel } from "@/components/layout/InvitationNotificationsPanel";
 import { menuItems } from "@/components/layout/Sidebar";
 import { useWorkspaceNavigation } from "@/components/layout/useWorkspaceNavigation";
 import { ProjectCreateDialog } from "@/components/projects/ProjectCreateDialog";
@@ -25,6 +31,12 @@ import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription"
 import { buildGlobalSearchResults, type GlobalSearchResult } from "@/lib/search/global";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
+import {
+  clearStoredActiveProjectId,
+  clearWorkspaceCache,
+  setStoredActiveOrganizationId,
+  setStoredActiveProjectId
+} from "@/lib/data/workspace";
 import type { ProjectInput } from "@/lib/validations/projects";
 import type { Partida, Proveedor, Recurso } from "@/types/domain";
 
@@ -33,7 +45,9 @@ export function Topbar() {
   const router = useRouter();
   const supabase = useMemo(() => createBrowserClient(), []);
   const {
+    activeOrganization,
     activeProject,
+    organizations,
     projects,
     reload: reloadWorkspace,
     scope
@@ -41,10 +55,13 @@ export function Topbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [pendingInvitationCount, setPendingInvitationCount] = useState(0);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -153,11 +170,42 @@ export function Topbar() {
 
       setIsCreateProjectOpen(false);
       setIsProjectMenuOpen(false);
+      setStoredActiveProjectId(result.data.id);
       await reloadWorkspace();
       router.push(`/presupuestos/${result.data.id}`);
       router.refresh();
     },
     [reloadWorkspace, router, scope, supabase]
+  );
+
+  const handleSelectOrganization = useCallback(
+    async (organizationId: string) => {
+      setStoredActiveOrganizationId(organizationId);
+      clearStoredActiveProjectId();
+      clearWorkspaceCache(supabase);
+      await reloadWorkspace();
+      if (pathname.startsWith("/presupuestos/")) {
+        router.replace("/presupuestos");
+      }
+      router.refresh();
+    },
+    [pathname, reloadWorkspace, router, supabase]
+  );
+
+  const handleSelectProject = useCallback(
+    async (projectId: string) => {
+      setStoredActiveProjectId(projectId);
+      clearWorkspaceCache(supabase);
+      setIsProjectMenuOpen(false);
+      await reloadWorkspace();
+
+      if (pathname.startsWith("/presupuestos")) {
+        router.replace(`/presupuestos/${projectId}`);
+      }
+
+      router.refresh();
+    },
+    [pathname, reloadWorkspace, router, supabase]
   );
 
   const handleSelectSearchResult = useCallback(
@@ -185,54 +233,121 @@ export function Topbar() {
         <div className="relative hidden lg:block">
           <button
             aria-expanded={isProjectMenuOpen}
-            className="flex min-w-[310px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+            className="flex min-w-[340px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
             onClick={() => setIsProjectMenuOpen((current) => !current)}
             type="button"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-600">
-              <Building2 className="h-5 w-5" />
+              {activeOrganization?.tipoOrganizacion === "personal" ? (
+                <Building2 className="h-5 w-5" />
+              ) : (
+                <BriefcaseBusiness className="h-5 w-5" />
+              )}
             </span>
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
-              {activeProject?.nombre || "Seleccionar proyecto"}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-slate-800">
+                {activeOrganization?.nombre || "Seleccionar organizacion"}
+              </span>
+              <span className="block truncate text-xs text-slate-500">
+                {activeProject?.nombre || "Sin proyecto seleccionado"}
+              </span>
             </span>
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </button>
 
           {isProjectMenuOpen ? (
-            <section className="absolute left-0 top-14 z-40 w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
-              <div className="border-b border-slate-200 p-3">
-                <button
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-brand-700 transition hover:bg-blue-50"
-                  onClick={() => {
-                    setProjectError(null);
-                    setIsCreateProjectOpen(true);
-                  }}
-                  type="button"
+            <section className="absolute left-0 top-14 z-40 w-[460px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                <span className="text-xs font-bold uppercase text-slate-400">Organizacion y proyectos</span>
+                <Link
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-brand-700 transition hover:bg-blue-50"
+                  href="/configuracion/organizaciones"
+                  onClick={() => setIsProjectMenuOpen(false)}
                 >
-                  <FilePlus2 className="h-4 w-4" />
-                  Nuevo proyecto
-                </button>
+                  <Settings className="h-3.5 w-3.5" />
+                  Gestionar
+                </Link>
               </div>
-              <div className="max-h-80 overflow-y-auto p-2">
-                {projects.map((project) => (
-                  <button
-                    className={cn(
-                      "flex w-full flex-col rounded-xl px-3 py-2 text-left transition hover:bg-blue-50",
-                      activeProject?.id === project.id && "bg-blue-50"
-                    )}
-                    key={project.id}
-                    onClick={() => {
-                      setIsProjectMenuOpen(false);
-                      router.push(`/presupuestos/${project.id}`);
-                    }}
-                    type="button"
-                  >
-                    <span className="truncate text-sm font-bold text-slate-900">{project.nombre}</span>
-                    <span className="mt-0.5 truncate text-xs text-slate-500">
-                      {[project.cliente, project.ubicacion].filter(Boolean).join(" - ") || "Sin cliente"}
-                    </span>
-                  </button>
-                ))}
+              <div className="max-h-[520px] overflow-y-auto p-2">
+                {organizations.map((organization) => {
+                  const isActiveOrganization = activeOrganization?.id === organization.id;
+
+                  return (
+                    <div
+                      className={cn(
+                        "rounded-xl border p-2",
+                        isActiveOrganization ? "border-blue-200 bg-blue-50/70" : "border-transparent"
+                      )}
+                      key={organization.id}
+                    >
+                      <button
+                        className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-white"
+                        onClick={() => void handleSelectOrganization(organization.id)}
+                        type="button"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand-600 shadow-sm">
+                          {organization.tipoOrganizacion === "personal" ? (
+                            <Building2 className="h-4 w-4" />
+                          ) : (
+                            <BriefcaseBusiness className="h-4 w-4" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-slate-900">{organization.nombre}</span>
+                          <span className="block text-xs text-slate-500">
+                            {organization.tipoOrganizacion === "personal" ? "Personal" : "Empresa"} - {organization.rol}
+                          </span>
+                        </span>
+                        <ChevronDown
+                          className={cn("h-4 w-4 text-slate-400 transition", isActiveOrganization && "rotate-180")}
+                        />
+                      </button>
+
+                      {isActiveOrganization ? (
+                        <div className="ml-4 mt-1 border-l border-blue-100 pl-4">
+                          {organization.projects.length > 0 ? (
+                            organization.projects.map((project) => (
+                              <button
+                                className={cn(
+                                  "flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left transition hover:bg-white",
+                                  activeProject?.id === project.id && "bg-white shadow-sm"
+                                )}
+                                key={project.id}
+                                onClick={() => void handleSelectProject(project.id)}
+                                type="button"
+                              >
+                                <Folder className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-bold text-slate-900">{project.nombre}</span>
+                                  <span className="mt-0.5 block truncate text-xs text-slate-500">
+                                    {[project.cliente, project.ubicacion].filter(Boolean).join(" - ") || "Sin cliente"}
+                                  </span>
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="px-2 py-3 text-sm text-slate-500">
+                              Esta organizacion todavia no tiene proyectos disponibles.
+                            </p>
+                          )}
+                          <button
+                            className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold text-brand-700 transition hover:bg-white disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent"
+                            disabled={!organization.canMutate}
+                            onClick={() => {
+                              setProjectError(null);
+                              setIsCreateProjectOpen(true);
+                            }}
+                            title={organization.canMutate ? "Nuevo proyecto" : "Solo owners o admins pueden crear proyectos"}
+                            type="button"
+                          >
+                            <FilePlus2 className="h-4 w-4" />
+                            Nuevo proyecto
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </section>
           ) : null}
@@ -279,9 +394,41 @@ export function Topbar() {
         <div className="ml-auto flex items-center gap-3">
           <div className="relative">
             <button
+              aria-expanded={isNotificationsOpen}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              onClick={() => {
+                setIsNotificationsOpen((current) => !current);
+                setIsActivityOpen(false);
+                setIsProfileMenuOpen(false);
+              }}
+              title="Notificaciones"
+              type="button"
+            >
+              <Mail className="h-5 w-5" />
+              {pendingInvitationCount > 0 ? (
+                <span className="absolute right-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {pendingInvitationCount > 9 ? "9+" : pendingInvitationCount}
+                </span>
+              ) : null}
+            </button>
+            <InvitationNotificationsPanel
+              onAccepted={() => {
+                void reloadWorkspace();
+                router.refresh();
+              }}
+              onPendingCountChange={setPendingInvitationCount}
+              open={isNotificationsOpen}
+            />
+          </div>
+          <div className="relative">
+            <button
               aria-expanded={isActivityOpen}
               className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-              onClick={() => setIsActivityOpen((current) => !current)}
+              onClick={() => {
+                setIsActivityOpen((current) => !current);
+                setIsNotificationsOpen(false);
+                setIsProfileMenuOpen(false);
+              }}
               title="Actividad reciente"
               type="button"
             >
@@ -291,26 +438,56 @@ export function Topbar() {
             <ActivityPanel open={isActivityOpen} scope={scope} status={activity.status} />
           </div>
           <div className="h-10 w-px bg-slate-200" />
-          <div className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-200 to-amber-100 text-sm font-bold text-slate-800">
-              {userInitials || "CY"}
-            </span>
-            <span className="hidden text-left md:block">
-              <span className="block max-w-[190px] truncate text-sm font-bold text-slate-900">
-                {userEmail ?? "Sesion activa"}
-              </span>
-              <span className="block text-xs text-slate-500">Sesion activa</span>
-            </span>
+          <div className="relative">
             <button
-              aria-label="Cerrar sesion"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-slate-500"
-              disabled={isSigningOut}
-              onClick={handleSignOut}
-              title={isSigningOut ? "Cerrando sesion" : "Cerrar sesion"}
+              aria-expanded={isProfileMenuOpen}
+              className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2 transition hover:bg-slate-100"
+              onClick={() => {
+                setIsProfileMenuOpen((current) => !current);
+                setIsActivityOpen(false);
+                setIsNotificationsOpen(false);
+              }}
               type="button"
             >
-              <LogOut className="h-4 w-4" />
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-200 to-amber-100 text-sm font-bold text-slate-800">
+                {userInitials || "CY"}
+              </span>
+              <span className="hidden text-left md:block">
+                <span className="block max-w-[190px] truncate text-sm font-bold text-slate-900">
+                  {userEmail ?? "Sesion activa"}
+                </span>
+                <span className="block text-xs text-slate-500">Sesion activa</span>
+              </span>
+              <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
             </button>
+
+            {isProfileMenuOpen ? (
+              <section className="absolute right-0 top-14 z-40 w-[280px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
+                <div className="border-b border-slate-200 p-4">
+                  <p className="truncate text-sm font-bold text-slate-950">{userEmail ?? "Sesion activa"}</p>
+                  <p className="mt-1 text-xs text-slate-500">Cuenta y organizaciones</p>
+                </div>
+                <div className="p-2">
+                  <Link
+                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-blue-50 hover:text-brand-700"
+                    href="/configuracion/organizaciones"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    <UserCircle className="h-4 w-4" />
+                    Mis organizaciones
+                  </Link>
+                  <button
+                    className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSigningOut}
+                    onClick={handleSignOut}
+                    type="button"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {isSigningOut ? "Cerrando sesion..." : "Cerrar sesion"}
+                  </button>
+                </div>
+              </section>
+            ) : null}
           </div>
         </div>
       </div>

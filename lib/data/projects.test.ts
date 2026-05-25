@@ -44,9 +44,10 @@ describe("projects repository", () => {
         args: {
           cliente: "Cliente Demo",
           nombre_proyecto: "Proyecto Demo",
+          p_organizacion_id: "org-1",
           ubicacion: "Lima"
         },
-        name: "create_project_with_current_member"
+        name: "create_project_in_organization"
       }
     ]);
     if (result.ok) {

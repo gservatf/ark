@@ -28,7 +28,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { listBudgetDashboardProjects, type BudgetDashboardProject } from "@/lib/data/budgets";
 import { createProject } from "@/lib/data/projects";
 import type { DataScope } from "@/lib/data/types";
-import { resolveOrganizationWorkspace } from "@/lib/data/workspace";
+import { resolveOrganizationWorkspace, setStoredActiveProjectId, type OrganizationSummary } from "@/lib/data/workspace";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import type { ProjectInput } from "@/lib/validations/projects";
@@ -37,6 +37,7 @@ export default function HomePage() {
   const pathname = usePathname();
   const router = useRouter();
   const [projects, setProjects] = useState<BudgetDashboardProject[]>([]);
+  const [activeOrganization, setActiveOrganization] = useState<OrganizationSummary | null>(null);
   const [scope, setScope] = useState<DataScope | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +68,7 @@ export default function HomePage() {
       return;
     }
 
+    setActiveOrganization(workspaceResult.data.activeOrganization);
     setScope(scope);
     setProjects(result.data);
     setIsLoading(false);
@@ -135,6 +137,7 @@ export default function HomePage() {
       }
 
       setIsCreateProjectOpen(false);
+      setStoredActiveProjectId(result.data.id);
       await loadData();
       router.push(`/presupuestos/${result.data.id}`);
       router.refresh();
@@ -210,7 +213,12 @@ export default function HomePage() {
         <PageHeader
           actions={
             <>
-              <Button icon={Plus} onClick={() => setIsCreateProjectOpen(true)} variant="secondary">
+              <Button
+                disabled={!activeOrganization?.canMutate}
+                icon={Plus}
+                onClick={() => setIsCreateProjectOpen(true)}
+                variant="secondary"
+              >
                 Nuevo proyecto
               </Button>
               <Link
@@ -232,7 +240,7 @@ export default function HomePage() {
             </>
           }
           description="Vista persistente de proyectos: muestra la última versión oficial o, si todavía no existe, el borrador activo."
-          eyebrow="Dashboard general"
+          eyebrow={activeOrganization?.nombre || "Dashboard general"}
           title="Proyectos y presupuestos"
         />
 
@@ -269,12 +277,25 @@ export default function HomePage() {
           emptyState={
             <EmptyState
               action={
-                <Button icon={Plus} onClick={() => setIsCreateProjectOpen(true)}>
+                <Button
+                  disabled={!activeOrganization?.canMutate}
+                  icon={Plus}
+                  onClick={() => setIsCreateProjectOpen(true)}
+                  title={activeOrganization?.canMutate ? "Crear nuevo proyecto" : "Solicita acceso a un admin de la organizacion"}
+                >
                   Crear nuevo proyecto
                 </Button>
               }
-              description="Tu espacio de trabajo esta listo. Crea el primer proyecto para empezar a armar presupuestos."
-              title="Todavia no tienes proyectos"
+              description={
+                activeOrganization?.tipoOrganizacion === "empresa" && !activeOrganization.canMutate
+                  ? "Tu cuenta pertenece a esta organizacion, pero aun no tienes proyectos asignados. Pide a un owner o admin que te agregue a un proyecto."
+                  : "Tu espacio de trabajo esta listo. Crea el primer proyecto para empezar a armar presupuestos."
+              }
+              title={
+                activeOrganization?.tipoOrganizacion === "empresa" && !activeOrganization.canMutate
+                  ? "Aun no tienes proyectos en esta organizacion"
+                  : "Todavia no tienes proyectos"
+              }
             />
           }
           isEmpty={projects.length === 0}

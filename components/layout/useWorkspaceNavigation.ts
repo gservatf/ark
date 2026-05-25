@@ -3,7 +3,13 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { resolveProjectWorkspace, type ProjectWorkspace } from "@/lib/data/workspace";
+import {
+  clearStoredActiveProjectId,
+  clearWorkspaceCache,
+  resolveProjectWorkspace,
+  setStoredActiveOrganizationId,
+  type ProjectWorkspace
+} from "@/lib/data/workspace";
 import { createBrowserClient } from "@/lib/supabase/browser";
 import type { Proyecto } from "@/types/domain";
 
@@ -41,13 +47,27 @@ export function useWorkspaceNavigation() {
     return getActiveProject(projects, workspace?.scope.proyectoId);
   }, [workspace]);
 
+  const selectOrganization = useCallback(
+    async (organizationId: string) => {
+      const supabase = createBrowserClient();
+      setStoredActiveOrganizationId(organizationId);
+      clearStoredActiveProjectId();
+      clearWorkspaceCache(supabase);
+      await loadWorkspace();
+    },
+    [loadWorkspace]
+  );
+
   return {
+    activeOrganization: workspace?.activeOrganization || null,
     activeProject,
     error,
     isLoading,
+    organizations: workspace?.organizations || [],
     projects: workspace?.projects || [],
     reload: loadWorkspace,
     scope: workspace?.scope || null,
+    selectOrganization,
     workspace
   };
 }

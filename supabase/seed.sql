@@ -795,6 +795,35 @@ insert into public.organizaciones (
   id,
   nombre,
   ruc,
+  tipo_organizacion,
+  estado,
+  created_at,
+  updated_at
+) values
+  ('00000000-0000-0000-0000-00000000f001', 'Espacio de Owner Demo', null, 'personal', 'activo', now(), now()),
+  ('00000000-0000-0000-0000-00000000f002', 'Espacio de Editor Demo', null, 'personal', 'activo', now(), now()),
+  ('00000000-0000-0000-0000-00000000f003', 'Espacio de Lector Demo', null, 'personal', 'activo', now(), now()),
+  ('00000000-0000-0000-0000-00000000f004', 'Espacio de Externo Demo', null, 'personal', 'activo', now(), now());
+
+insert into public.organizacion_miembros (
+  id,
+  organizacion_id,
+  user_id,
+  rol,
+  estado,
+  joined_at,
+  created_at,
+  updated_at
+) values
+  ('00000000-0000-0000-0000-00000000f101', '00000000-0000-0000-0000-00000000f001', '00000000-0000-0000-0000-00000000a001', 'owner', 'activo', now(), now() + interval '1 second', now()),
+  ('00000000-0000-0000-0000-00000000f102', '00000000-0000-0000-0000-00000000f002', '00000000-0000-0000-0000-00000000a002', 'owner', 'activo', now(), now() + interval '1 second', now()),
+  ('00000000-0000-0000-0000-00000000f103', '00000000-0000-0000-0000-00000000f003', '00000000-0000-0000-0000-00000000a003', 'owner', 'activo', now(), now() + interval '1 second', now()),
+  ('00000000-0000-0000-0000-00000000f104', '00000000-0000-0000-0000-00000000f004', '00000000-0000-0000-0000-00000000a004', 'owner', 'activo', now(), now() + interval '1 second', now());
+
+insert into public.organizaciones (
+  id,
+  nombre,
+  ruc,
   estado,
   created_at,
   updated_at

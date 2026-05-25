@@ -26,7 +26,7 @@ export const menuItems = [
   { label: "Recursos", icon: Users, href: "/recursos" },
   { label: "Reportes", icon: BarChart3, href: "/reportes" },
   { label: "Historial de precios", icon: FileClock, disabled: true },
-  { label: "Configuración", icon: Settings, disabled: true }
+  { label: "Configuracion", icon: Settings, href: "/configuracion/proyecto" }
 ];
 
 export function Sidebar() {

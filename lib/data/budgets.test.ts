@@ -247,7 +247,9 @@ describe("budgetsRepository helpers", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(harness.rpcCalls).toEqual([{ args: undefined, name: "list_budget_dashboard_projects" }]);
+    expect(harness.rpcCalls).toEqual([
+      { args: { p_organizacion_id: "org-1" }, name: "list_budget_dashboard_projects" }
+    ]);
     if (result.ok) {
       expect(result.data).toEqual([dashboardProject]);
     }

@@ -19,14 +19,10 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function checkWorkspace() {
-      const { data } = await supabase
-        .from("organizacion_miembros")
-        .select("id")
-        .eq("estado", "activo")
-        .limit(1)
-        .maybeSingle();
+      const { data } = await supabase.rpc("list_workspace_organizations");
+      const organizations = (data || []) as Array<{ tipoOrganizacion?: string }>;
 
-      if (data) {
+      if (organizations.some((organization) => organization.tipoOrganizacion === "personal")) {
         router.replace("/");
         router.refresh();
         return;

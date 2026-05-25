@@ -3,59 +3,83 @@ import type { Proyecto } from "@/types/domain";
 import { dataFailure, dataSuccess, normalizeSupabaseError, notFoundError } from "./errors";
 import type { DataClient, DataResult, DataScope } from "./types";
 
+export const activeOrganizationStorageKey = "cyp.activeOrganizationId";
+export const activeProjectStorageKey = "cyp.activeProjectId";
+
+export type OrganizationSummary = {
+  accesoTodosProyectos?: boolean;
+  canMutate: boolean;
+  id: string;
+  membershipId: string;
+  nombre: string;
+  projects: Proyecto[];
+  rol: string;
+  rolProyectoPredeterminado?: string | null;
+  ruc: string | null;
+  tipoOrganizacion: "personal" | "empresa";
+};
+
 export type OrganizationWorkspace = {
+  activeOrganization: OrganizationSummary;
   canMutate: boolean;
   membershipId: string;
   organizationRole: string;
+  organizations: OrganizationSummary[];
   scope: DataScope;
 };
 
 export type ProjectWorkspace = OrganizationWorkspace & {
   canEmit: boolean;
-  projectRole: string;
+  projectRole?: string;
   projects: Proyecto[];
 };
 
-type ProjectMembershipRow = {
-  proyecto: Proyecto | null;
-  proyecto_id: string;
-  rol: string;
-};
-
-const organizationWorkspaceCache = new WeakMap<DataClient, Promise<DataResult<OrganizationWorkspace>>>();
+const organizationWorkspaceCache = new WeakMap<DataClient, Map<string, Promise<DataResult<OrganizationWorkspace>>>>();
 const projectWorkspaceCache = new WeakMap<DataClient, Map<string, Promise<DataResult<ProjectWorkspace>>>>();
 
 export async function resolveOrganizationWorkspace(
-  client: DataClient
+  client: DataClient,
+  organizationId?: string
 ): Promise<DataResult<OrganizationWorkspace>> {
   if (canUseWorkspaceCache()) {
-    const cached = organizationWorkspaceCache.get(client);
+    const cacheKey = organizationId || getStoredActiveOrganizationId() || "__first__";
+    let clientCache = organizationWorkspaceCache.get(client);
+
+    if (!clientCache) {
+      clientCache = new Map();
+      organizationWorkspaceCache.set(client, clientCache);
+    }
+
+    const cached = clientCache.get(cacheKey);
 
     if (cached) {
       return cached;
     }
 
-    const pending = resolveOrganizationWorkspaceUncached(client).then((result) => {
+    const pending = resolveOrganizationWorkspaceUncached(client, organizationId).then((result) => {
       if (!result.ok) {
-        organizationWorkspaceCache.delete(client);
+        clientCache?.delete(cacheKey);
       }
 
       return result;
     });
-    organizationWorkspaceCache.set(client, pending);
+    clientCache.set(cacheKey, pending);
 
     return pending;
   }
 
-  return resolveOrganizationWorkspaceUncached(client);
+  return resolveOrganizationWorkspaceUncached(client, organizationId);
 }
 
 export async function resolveProjectWorkspace(
   client: DataClient,
-  requestedProjectId?: string
+  requestedProjectId?: string,
+  organizationId?: string
 ): Promise<DataResult<ProjectWorkspace>> {
   if (canUseWorkspaceCache()) {
-    const cacheKey = requestedProjectId || "__first__";
+    const cacheKey = `${organizationId || getStoredActiveOrganizationId() || "__first__"}:${
+      requestedProjectId || getStoredActiveProjectId() || "__first__"
+    }`;
     let clientCache = projectWorkspaceCache.get(client);
 
     if (!clientCache) {
@@ -69,7 +93,7 @@ export async function resolveProjectWorkspace(
       return cached;
     }
 
-    const pending = resolveProjectWorkspaceUncached(client, requestedProjectId).then((result) => {
+    const pending = resolveProjectWorkspaceUncached(client, requestedProjectId, organizationId).then((result) => {
       if (!result.ok) {
         clientCache?.delete(cacheKey);
       }
@@ -81,7 +105,7 @@ export async function resolveProjectWorkspace(
     return pending;
   }
 
-  return resolveProjectWorkspaceUncached(client, requestedProjectId);
+  return resolveProjectWorkspaceUncached(client, requestedProjectId, organizationId);
 }
 
 export function clearWorkspaceCache(client?: DataClient) {
@@ -94,8 +118,69 @@ export function clearWorkspaceCache(client?: DataClient) {
   // WeakMap no permite clear(); en la practica se invalida por cliente singleton.
 }
 
-async function resolveOrganizationWorkspaceUncached(
+export async function listWorkspaceOrganizations(
   client: DataClient
+): Promise<DataResult<OrganizationSummary[]>> {
+  const { data, error } = await client.rpc("list_workspace_organizations");
+
+  if (error) {
+    return dataFailure(normalizeSupabaseError(error, "organizaciones.listWorkspace"));
+  }
+
+  return dataSuccess(((data || []) as unknown as OrganizationSummary[]).map(normalizeOrganizationSummary));
+}
+
+export function getStoredActiveOrganizationId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(activeOrganizationStorageKey);
+}
+
+export function setStoredActiveOrganizationId(organizationId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(activeOrganizationStorageKey, organizationId);
+}
+
+export function getStoredActiveProjectId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(activeProjectStorageKey);
+}
+
+export function setStoredActiveProjectId(projectId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(activeProjectStorageKey, projectId);
+}
+
+export function clearStoredActiveProjectId() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(activeProjectStorageKey);
+}
+
+export function clearStoredActiveOrganizationId() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(activeOrganizationStorageKey);
+}
+
+async function resolveOrganizationWorkspaceUncached(
+  client: DataClient,
+  organizationId?: string
 ): Promise<DataResult<OrganizationWorkspace>> {
   const {
     data: { user },
@@ -103,87 +188,111 @@ async function resolveOrganizationWorkspaceUncached(
   } = await client.auth.getUser();
 
   if (userError || !user) {
-    return dataFailure(notFoundError("Debes iniciar sesión para consultar este módulo."));
+    return dataFailure(notFoundError("Debes iniciar sesion para consultar este modulo."));
   }
 
-  const { data: membership, error: membershipError } = await client
-    .from("organizacion_miembros")
-    .select("id, organizacion_id, rol")
-    .eq("estado", "activo")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const organizationsResult = await listWorkspaceOrganizations(client);
 
-  if (membershipError) {
-    return dataFailure(normalizeSupabaseError(membershipError, "organizacion_miembros.resolveWorkspace"));
+  if (!organizationsResult.ok) {
+    return organizationsResult;
   }
 
-  if (!membership) {
-    return dataFailure(notFoundError("No se encontró una organización activa para esta cuenta."));
+  const organizations = organizationsResult.data;
+
+  if (organizations.length === 0) {
+    return dataFailure(notFoundError("No se encontro una organizacion activa para esta cuenta."));
+  }
+
+  const requestedOrganizationId = organizationId || getStoredActiveOrganizationId();
+  const selectedOrganization =
+    organizations.find((organization) => organization.id === requestedOrganizationId) || organizations[0];
+
+  if (requestedOrganizationId && selectedOrganization.id !== requestedOrganizationId) {
+    clearStoredActiveOrganizationId();
   }
 
   return dataSuccess({
-    canMutate: membership.rol === "owner" || membership.rol === "admin",
-    membershipId: membership.id,
-    organizationRole: membership.rol,
+    activeOrganization: selectedOrganization,
+    canMutate: selectedOrganization.canMutate,
+    membershipId: selectedOrganization.membershipId,
+    organizationRole: selectedOrganization.rol,
+    organizations,
     scope: {
       actorId: user.id,
-      organizacionId: membership.organizacion_id
+      organizacionId: selectedOrganization.id
     }
   });
 }
 
 async function resolveProjectWorkspaceUncached(
   client: DataClient,
-  requestedProjectId?: string
+  requestedProjectId?: string,
+  organizationId?: string
 ): Promise<DataResult<ProjectWorkspace>> {
-  const organizationResult = await resolveOrganizationWorkspace(client);
+  const organizationResult = await resolveOrganizationWorkspace(client, organizationId);
 
   if (!organizationResult.ok) {
     return organizationResult;
   }
 
-  const { data: projectMemberships, error: projectMembershipError } = await client
-    .from("proyecto_miembros")
-    .select("rol, proyecto_id, proyecto:proyectos(*)")
-    .eq("organizacion_miembro_id", organizationResult.data.membershipId)
-    .eq("estado", "activo")
-    .order("created_at", { ascending: true })
-    .returns<ProjectMembershipRow[]>();
+  const organizationByRequestedProject = requestedProjectId
+    ? organizationResult.data.organizations.find((organization) =>
+        organization.projects.some((project) => project.id === requestedProjectId)
+      )
+    : undefined;
+  const selectedOrganization = organizationByRequestedProject || organizationResult.data.activeOrganization;
+  const projects = selectedOrganization.projects;
+  const storedProjectId = getStoredActiveProjectId();
+  const selectedProject =
+    projects.find((project) => project.id === requestedProjectId) ||
+    projects.find((project) => project.id === storedProjectId) ||
+    projects[0] ||
+    null;
+  const selectedProjectRole = getProjectRole(selectedProject);
 
-  if (projectMembershipError) {
-    return dataFailure(normalizeSupabaseError(projectMembershipError, "proyecto_miembros.resolveWorkspace"));
+  if (organizationByRequestedProject) {
+    setStoredActiveOrganizationId(selectedOrganization.id);
   }
 
-  if (!projectMemberships || projectMemberships.length === 0) {
-    return dataFailure(notFoundError("No se encontró un proyecto activo para esta cuenta."));
+  if (selectedProject) {
+    setStoredActiveProjectId(selectedProject.id);
+  } else if (storedProjectId) {
+    clearStoredActiveProjectId();
   }
-
-  const selectedMembership =
-    projectMemberships.find((item) => item.proyecto_id === requestedProjectId) || projectMemberships[0];
-  const projects = projectMemberships
-    .map((item) => item.proyecto)
-    .filter((project): project is Proyecto => Boolean(project));
 
   return dataSuccess({
     ...organizationResult.data,
+    activeOrganization: selectedOrganization,
     canEmit:
-      organizationResult.data.organizationRole === "owner" ||
-      organizationResult.data.organizationRole === "admin" ||
-      selectedMembership.rol === "admin" ||
-      selectedMembership.rol === "presupuestador",
+      selectedOrganization.canMutate ||
+      selectedProjectRole === "admin" ||
+      selectedProjectRole === "presupuestador",
     canMutate:
-      organizationResult.data.canMutate ||
-      ["admin", "presupuestador", "editor"].includes(selectedMembership.rol),
-    projectRole: selectedMembership.rol,
+      selectedOrganization.canMutate ||
+      ["admin", "presupuestador", "editor"].includes(selectedProjectRole || ""),
+    membershipId: selectedOrganization.membershipId,
+    organizationRole: selectedOrganization.rol,
+    projectRole: selectedProjectRole,
     projects,
     scope: {
-      ...organizationResult.data.scope,
-      proyectoId: selectedMembership.proyecto_id
+      actorId: organizationResult.data.scope.actorId,
+      organizacionId: selectedOrganization.id,
+      proyectoId: selectedProject?.id
     }
   });
 }
 
 function canUseWorkspaceCache() {
   return typeof window !== "undefined";
+}
+
+function normalizeOrganizationSummary(organization: OrganizationSummary): OrganizationSummary {
+  return {
+    ...organization,
+    projects: organization.projects || []
+  };
+}
+
+function getProjectRole(project: Proyecto | null) {
+  return (project as (Proyecto & { rol?: string }) | null)?.rol;
 }

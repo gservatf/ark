@@ -28,7 +28,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a001', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
-select is((select count(*)::int from public.organizaciones), 1, 'owner ve solo su organizacion');
+select is((select count(*)::int from public.organizaciones), 2, 'owner ve su organizacion de empresa y su espacio personal');
 select is((select count(*)::int from public.proyectos), 1, 'owner ve solo su proyecto demo');
 select ok((select count(*) > 0 from public.recurso_proveedor_precios), 'owner ve cotizaciones de su organizacion');
 select set_config('realtime.topic', 'org:00000000-0000-0000-0000-000000000901', true);
@@ -83,7 +83,7 @@ select is(
 select ok(public.is_organization_admin('00000000-0000-0000-0000-000000000901'), 'owner es admin de organizacion');
 select ok(public.can_emit_project('00000000-0000-0000-0000-000000000902'), 'owner puede emitir versiones');
 select is(
-  jsonb_array_length(public.list_budget_dashboard_projects()),
+  jsonb_array_length(public.list_budget_dashboard_projects('00000000-0000-0000-0000-000000000901'::uuid)),
   1,
   'dashboard RPC devuelve solo proyectos accesibles del owner'
 );
@@ -440,7 +440,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a004', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
-select is((select count(*)::int from public.organizaciones), 1, 'externo ve solo su organizacion');
+select is((select count(*)::int from public.organizaciones), 2, 'externo ve su organizacion externa y su espacio personal');
 select is((select count(*)::int from public.proyectos), 1, 'externo ve solo su proyecto');
 select is((select count(*)::int from public.user_profiles), 1, 'externo solo ve perfiles de su organizacion');
 select is(
@@ -638,6 +638,114 @@ select throws_ok(
   '42501',
   null,
   'auditoria rechaza entidad de otra organizacion'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a001', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+create temp table test_invitation_accept as
+select *
+from public.create_organization_invitation(
+  '00000000-0000-0000-0000-000000000901',
+  'externo@cyp.local',
+  'miembro',
+  array['00000000-0000-0000-0000-000000000902'::uuid],
+  true,
+  'editor'
+);
+select is((select count(*)::int from test_invitation_accept), 1, 'owner crea invitacion a organizacion con proyectos actuales y futuros');
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a002', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select throws_ok(
+  $$
+    select * from public.create_organization_invitation(
+      '00000000-0000-0000-0000-000000000901',
+      'nuevo@cyp.local',
+      'miembro',
+      '{}'::uuid[],
+      false,
+      null
+    )
+  $$,
+  '42501',
+  null,
+  'miembro no admin no puede invitar'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a004', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select is(
+  jsonb_array_length(public.list_received_organization_invitations()),
+  1,
+  'invitado ve invitacion pendiente para su correo'
+);
+select lives_ok(
+  $$
+    select * from public.accept_organization_invitation_by_id(
+      (select invitacion_id from test_invitation_accept)
+    )
+  $$,
+  'usuario invitado acepta invitacion por id'
+);
+select ok(public.is_project_member('00000000-0000-0000-0000-000000000902'), 'invitacion aceptada asigna proyecto');
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a001', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select lives_ok(
+  $$ select public.create_project_in_organization('00000000-0000-0000-0000-000000000901', 'Proyecto Futuro Invitado', 'Cliente Demo', 'Lima') $$,
+  'owner crea proyecto futuro despues de aceptar invitacion'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a004', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select ok(
+  (
+    select public.can_read_project(p.id)
+    from public.proyectos p
+    where p.nombre = 'Proyecto Futuro Invitado'
+    limit 1
+  ),
+  'invitado con acceso futuro puede leer proyectos creados despues'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a001', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+create temp table test_invitation_revoke as
+select *
+from public.create_organization_invitation(
+  '00000000-0000-0000-0000-000000000901',
+  'lector@cyp.local',
+  'miembro',
+  '{}'::uuid[],
+  false,
+  null
+);
+select lives_ok(
+  $$ select public.revoke_organization_invitation((select invitacion_id from test_invitation_revoke)) $$,
+  'owner revoca invitacion pendiente'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000a003', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select throws_ok(
+  $$ select * from public.accept_organization_invitation_by_id((select invitacion_id from test_invitation_revoke)) $$,
+  null,
+  'CYP_VALIDATION: Esta invitacion ya no esta pendiente.',
+  'invitacion revocada no se puede aceptar'
 );
 reset role;
 
