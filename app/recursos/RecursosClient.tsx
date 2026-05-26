@@ -28,16 +28,18 @@ import {
   type ResourceQuoteFormState
 } from "@/components/recursos/ResourceQuotesPanel";
 import { ResourceTable } from "@/components/recursos/ResourceTable";
-import { listProviders } from "@/lib/data/providers";
+import { getProviderById, listProviders } from "@/lib/data/providers";
 import {
   createResourceQuote,
   deactivateResourceQuote,
+  getResourceQuoteById,
   listResourceQuotes,
   updateResourceQuote
 } from "@/lib/data/quotes";
 import {
   createResource,
   deactivateResource,
+  getResourceById,
   listResourcePriceHistory,
   listResources,
   updateResource
@@ -127,16 +129,30 @@ export default function RecursosPage() {
   const [isQuotesLoading, setIsQuotesLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [conflict, setConflict] = useState<{ error: DataError; retry: () => Promise<void> } | null>(null);
+  const editingIdRef = useRef<string | null>(null);
+  const editingQuoteIdRef = useRef<string | null>(null);
+  const quotesRef = useRef<RecursoProveedorPrecio[]>([]);
+  const resourcesRef = useRef<Recurso[]>([]);
 
-  const loadHistory = useCallback(async (scope: DataScope, resourceId?: string) => {
+  const loadHistory = useCallback(async (
+    scope: DataScope,
+    resourceId?: string,
+    options: { showLoading?: boolean } = {}
+  ) => {
     if (!resourceId) {
       setHistory([]);
       return;
     }
 
-    setIsHistoryLoading(true);
+    if (options.showLoading !== false) {
+      setIsHistoryLoading(true);
+    }
+
     const result = await listResourcePriceHistory(createBrowserClient(), scope, resourceId);
-    setIsHistoryLoading(false);
+
+    if (options.showLoading !== false) {
+      setIsHistoryLoading(false);
+    }
 
     if (result.ok) {
       setHistory(result.data);
@@ -146,15 +162,25 @@ export default function RecursosPage() {
     }
   }, []);
 
-  const loadQuotes = useCallback(async (scope: DataScope, resourceId?: string) => {
+  const loadQuotes = useCallback(async (
+    scope: DataScope,
+    resourceId?: string,
+    options: { showLoading?: boolean } = {}
+  ) => {
     if (!resourceId) {
       setQuotes([]);
       return;
     }
 
-    setIsQuotesLoading(true);
+    if (options.showLoading !== false) {
+      setIsQuotesLoading(true);
+    }
+
     const result = await listResourceQuotes(createBrowserClient(), scope, resourceId);
-    setIsQuotesLoading(false);
+
+    if (options.showLoading !== false) {
+      setIsQuotesLoading(false);
+    }
 
     if (result.ok) {
       setQuotes(result.data);
@@ -221,6 +247,22 @@ export default function RecursosPage() {
   }, [selectedResourceId]);
 
   useEffect(() => {
+    editingIdRef.current = editingId;
+  }, [editingId]);
+
+  useEffect(() => {
+    editingQuoteIdRef.current = editingQuoteId;
+  }, [editingQuoteId]);
+
+  useEffect(() => {
+    resourcesRef.current = resources;
+  }, [resources]);
+
+  useEffect(() => {
+    quotesRef.current = quotes;
+  }, [quotes]);
+
+  useEffect(() => {
     void loadData();
   }, [loadData]);
 
@@ -252,10 +294,162 @@ export default function RecursosPage() {
     (payload: ActivityRealtimePayload) => ["recurso", "proveedor", "recurso_proveedor_precio"].includes(payload.entityType),
     []
   );
+  const removeResourceFromState = useCallback((resourceId: string) => {
+    const nextSelectedId = resourcesRef.current.find((resource) => resource.id !== resourceId)?.id;
+
+    setResources((current) => current.filter((resource) => resource.id !== resourceId));
+    setSelectedResourceId((current) => (current === resourceId ? nextSelectedId : current));
+    setDeactivateTarget((current) => (current?.id === resourceId ? undefined : current));
+    setEditingId((current) => (current === resourceId ? null : current));
+
+    if (editingIdRef.current === resourceId) {
+      setShowForm(false);
+      setFormErrors({});
+    }
+
+    if (selectedResourceIdRef.current === resourceId) {
+      setHistory([]);
+      setQuotes([]);
+    }
+  }, []);
+  const upsertResourceFromRealtime = useCallback(
+    (resource: Recurso) => {
+      setResources((current) => {
+        const existingIndex = current.findIndex((item) => item.id === resource.id);
+
+        if (existingIndex === -1) {
+          return [...current, resource];
+        }
+
+        return current.map((item) => (item.id === resource.id ? resource : item));
+      });
+      setSelectedResourceId((current) => current || resource.id);
+      setDeactivateTarget((current) => (current?.id === resource.id ? resource : current));
+
+      if (selectedResourceIdRef.current === resource.id && workspace) {
+        void loadHistory(workspace.scope, resource.id, { showLoading: false });
+      }
+    },
+    [loadHistory, workspace]
+  );
+  const removeProviderFromState = useCallback((providerId: string) => {
+    setProviders((current) => current.filter((provider) => provider.id !== providerId));
+  }, []);
+  const upsertProviderFromRealtime = useCallback((provider: Proveedor) => {
+    setProviders((current) => {
+      const existingIndex = current.findIndex((item) => item.id === provider.id);
+
+      if (existingIndex === -1) {
+        return [...current, provider];
+      }
+
+      return current.map((item) => (item.id === provider.id ? provider : item));
+    });
+  }, []);
+  const removeQuoteFromState = useCallback((quoteId: string) => {
+    setQuotes((current) => current.filter((quote) => quote.id !== quoteId));
+    setEditingQuoteId((current) => (current === quoteId ? null : current));
+
+    if (editingQuoteIdRef.current === quoteId) {
+      setShowQuoteForm(false);
+      setQuoteFormErrors({});
+    }
+  }, []);
+  const patchResourceActivity = useCallback(
+    async (payload: ActivityRealtimePayload) => {
+      if (!workspace || payload.organizacionId !== workspace.scope.organizacionId || !payload.entityId) {
+        return false;
+      }
+
+      const supabase = createBrowserClient();
+
+      if (payload.entityType === "recurso") {
+        if (payload.action.includes("delete") || payload.action.includes("remove")) {
+          removeResourceFromState(payload.entityId);
+          return true;
+        }
+
+        const result = await getResourceById(supabase, workspace.scope, payload.entityId);
+
+        if (!result.ok) {
+          if (result.error.code === "not_found") {
+            removeResourceFromState(payload.entityId);
+            return true;
+          }
+
+          return false;
+        }
+
+        upsertResourceFromRealtime(result.data);
+        return true;
+      }
+
+      if (payload.entityType === "proveedor") {
+        if (payload.action.includes("delete") || payload.action.includes("remove")) {
+          removeProviderFromState(payload.entityId);
+          return true;
+        }
+
+        const result = await getProviderById(supabase, workspace.scope, payload.entityId);
+
+        if (!result.ok) {
+          if (result.error.code === "not_found") {
+            removeProviderFromState(payload.entityId);
+            return true;
+          }
+
+          return false;
+        }
+
+        upsertProviderFromRealtime(result.data);
+        return true;
+      }
+
+      if (payload.entityType === "recurso_proveedor_precio") {
+        const result = await getResourceQuoteById(supabase, workspace.scope, payload.entityId);
+
+        if (!result.ok) {
+          if (result.error.code === "not_found") {
+            removeQuoteFromState(payload.entityId);
+            return true;
+          }
+
+          return false;
+        }
+
+        const selectedResourceId = selectedResourceIdRef.current;
+        const quote = result.data;
+        const knownQuote = quotesRef.current.some((item) => item.id === quote.id);
+
+        if (knownQuote && quote.recurso_id !== selectedResourceId) {
+          removeQuoteFromState(quote.id);
+          return true;
+        }
+
+        if (quote.recurso_id === selectedResourceId) {
+          await loadQuotes(workspace.scope, quote.recurso_id, { showLoading: false });
+        }
+
+        return true;
+      }
+
+      return false;
+    },
+    [
+      loadQuotes,
+      removeProviderFromState,
+      removeQuoteFromState,
+      removeResourceFromState,
+      upsertProviderFromRealtime,
+      upsertResourceFromRealtime,
+      workspace
+    ]
+  );
   const activity = useActivitySubscription({
     currentActorId: workspace?.scope.actorId,
     enabled: Boolean(workspace),
     filter: activityFilter,
+    onActivity: patchResourceActivity,
     onRefetch: loadData,
     topicScope: activityTopic
   });
