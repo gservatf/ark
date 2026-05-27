@@ -35,7 +35,7 @@ export const presupuestoSchema = baseEntitySchema.extend(presupuestoInputSchema.
 export const presupuestoPartidaInputSchema = z.object({
   presupuesto_id: requiredString("El presupuesto"),
   partida_id: requiredString("La partida"),
-  codigo_snapshot: requiredString("El código"),
+  codigo_snapshot: z.string().optional().default(""),
   nombre_snapshot: requiredString("El nombre"),
   unidad_snapshot: requiredString("La unidad"),
   categoria_snapshot: optionalNullableString(),

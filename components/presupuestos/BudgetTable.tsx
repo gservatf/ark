@@ -94,7 +94,9 @@ const BudgetRow = memo(function BudgetRow({
       </td>
       <td className="px-5 py-3">
         <button className="flex min-w-0 items-start gap-4 text-left" onClick={handleSelectLine} type="button">
-          <span className="w-20 shrink-0 font-semibold text-slate-700">{row.codigo_snapshot}</span>
+          <span className="w-20 shrink-0 font-semibold text-slate-700">
+            {formatPartidaCode(row.codigo_snapshot)}
+          </span>
           <span className="min-w-0">
             <span className="block max-w-[360px] truncate font-medium text-slate-800">{row.nombre_snapshot}</span>
             <span className="mt-1 block text-xs text-slate-500">
@@ -176,7 +178,9 @@ export function BudgetTable({
     () =>
       availablePartidas.map((partida) => ({
         id: partida.id,
-        label: `${partida.codigo} - ${partida.nombre}`
+        label: partida.codigo?.trim()
+          ? `${partida.codigo} - ${partida.nombre}`
+          : `Sin codigo - ${partida.nombre}`
       })),
     [availablePartidas]
   );
@@ -276,6 +280,10 @@ export function BudgetTable({
           </tbody>
     </DataTable>
   );
+}
+
+function formatPartidaCode(code: string) {
+  return code.trim() ? code : "Sin codigo";
 }
 
 function TableIconButton({

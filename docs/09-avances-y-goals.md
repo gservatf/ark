@@ -56,6 +56,7 @@ Seguir todos los goals de este documento debe llevar a un MVP completo y colabor
 - Fix `/partidas` 2026-05-27: el modal de edicion hidrata los recursos APU existentes, permite editar cada linea desde la tabla del popup y sincroniza altas, cambios y eliminaciones al guardar.
 - Detalle `/partidas/[id]` conectado a Supabase con builder APU persistente, snapshots de recursos, parciales calculados, costos por grupo, costo directo y simulaciÃ³n de precio unitario.
 - MÃ³dulo `/presupuestos` evolucionado a flujo persistente multi-proyecto con creaciÃ³n/ediciÃ³n de borrador activo, partidas existentes, metrados editables, eliminaciÃ³n de lÃ­neas, precios fijados por lÃ­nea/recurso, refresco de precios vigentes, selecciÃ³n de cotizaciÃ³n cliente, override manual, emisiÃ³n oficial y snapshots de recursos APU.
+- Fix `/presupuestos` 2026-05-27: los snapshots de presupuesto aceptan partidas sin codigo, alineados con el catalogo actual donde el codigo de partida es opcional.
 - Exportaciones mock de presupuesto agregadas en frontend: Excel con `xlsx` y PDF mediante vista imprimible usando partidas snapshot.
 - MigraciÃ³n inicial Supabase creada con tablas mÃ­nimas, enums, foreign keys, checks, triggers `updated_at` e Ã­ndices bÃ¡sicos.
 - Seed data PerÃº creado con proveedores, recursos, historial, partidas/APU y presupuesto demo con snapshots.
