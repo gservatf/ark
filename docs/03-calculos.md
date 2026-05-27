@@ -1,15 +1,15 @@
-# Cálculos
+﻿# CÃ¡lculos
 
 ## Principios
 
-- Las funciones de cálculo deben ser puras y testeables.
-- La UI solo debe invocar funciones de cálculo y mostrar resultados.
+- Las funciones de cÃ¡lculo deben ser puras y testeables.
+- La UI solo debe invocar funciones de cÃ¡lculo y mostrar resultados.
 - Los costos y porcentajes no pueden ser negativos.
-- Los porcentajes deben estar entre 0 y 100 salvo decisión técnica explícita.
+- Los porcentajes deben estar entre 0 y 100 salvo decisiÃ³n tÃ©cnica explÃ­cita.
 - La moneda del MVP es `PEN`.
 - Las funciones lanzan `RangeError` cuando reciben valores no finitos, negativos o porcentajes fuera de rango.
-- Las salidas monetarias públicas de cálculo se redondean a 2 decimales para evitar drift de floating point.
-- Los recalculos de borradores colaborativos y actualizaciones recibidas por Realtime deben seguir usando estas funciones puras; la colaboración no debe introducir fórmulas financieras en componentes visuales.
+- Las salidas monetarias pÃºblicas de cÃ¡lculo se redondean a 2 decimales para evitar drift de floating point.
+- Los recalculos de borradores colaborativos y actualizaciones recibidas por Realtime deben seguir usando estas funciones puras; la colaboraciÃ³n no debe introducir fÃ³rmulas financieras en componentes visuales.
 
 ## Archivos
 
@@ -23,19 +23,36 @@
 ## Funciones APU
 
 - `calculateApuResourcePartial`
+- `calculateApuResourceValues`
 - `calculateApuDirectCost`
 - `calculateApuUnitPrice`
 
-### Parcial de recurso APU
+### Cantidad y parcial de recurso APU
+
+El APU se calcula desde el contexto de la partida: `rendimiento` default `1`, `jornada_horas` default `8` y `desperdicio_materiales_porcentaje` default `5`.
 
 ```text
-base = cantidad * costo_unitario_snapshot
-transporte = cantidad * costo_transporte_snapshot
-desperdicio = base * desperdicio_porcentaje / 100
-parcial = base + transporte + desperdicio
+mano_obra_rendimiento:
+cantidad = cuadrilla * jornada_horas / rendimiento
+parcial = cantidad * (costo_unitario_snapshot + costo_transporte_snapshot)
+
+material_desperdicio:
+cantidad = cantidad_base * (1 + desperdicio_materiales_porcentaje / 100)
+parcial = cantidad * (costo_unitario_snapshot + costo_transporte_snapshot)
+
+equipo_hm_rendimiento:
+cantidad = cuadrilla * jornada_horas / rendimiento
+parcial = cantidad * (costo_unitario_snapshot + costo_transporte_snapshot)
+
+equipo_cantidad_fija:
+cantidad = cantidad_base
+parcial = cantidad * (costo_unitario_snapshot + costo_transporte_snapshot)
+
+herramientas_porcentaje_mano_obra:
+parcial = subtotal_mano_obra * porcentaje_aplicado / 100
 ```
 
-`rendimiento_factor` no multiplica ni divide el parcial financiero. Queda como dato informativo o de planificación; si en el futuro se convierte rendimiento a cantidad, esa conversión debe ser explícita antes de llamar al cálculo financiero.
+La cantidad final queda en `cantidad`; para materiales, `cantidad_base` es la cantidad sin desperdicio. Para herramientas manuales, el default de `porcentaje_aplicado` es `3`.
 
 ### Costo directo APU
 
@@ -62,7 +79,7 @@ En partidas/APU persistentes, el valor persistido por recurso es el `parcial`; e
 - `calculateBudgetTotals`
 - `shouldAutoUpdateDraftResourcePrice` como regla de capa de datos para decidir si un recurso vivo del borrador puede refrescarse con precios vigentes.
 
-### Parcial de línea
+### Parcial de lÃ­nea
 
 ```text
 parcial_partida = metrado * precio_unitario_snapshot
@@ -83,69 +100,69 @@ total = subtotal_con_margen + igv_total
 
 Cuando se agrega una partida, se refrescan precios vigentes o se cambia un metrado, la capa `lib/data/budgets.ts` recalcula en este orden:
 
-1. Parciales de recursos APU con `calculateApuResourcePartial`.
-2. Costo directo de la línea con `calculateApuDirectCost`.
-3. Precio unitario de la línea como costo directo APU, sin gastos generales ni utilidad dentro del APU.
-4. Parcial de línea con `calculateBudgetLinePartial`.
+1. Cantidades y parciales de recursos APU con `calculateApuResourceValues`.
+2. Costo directo de la lÃ­nea con `calculateApuDirectCost`.
+3. Precio unitario de la lÃ­nea como costo directo APU, sin gastos generales ni utilidad dentro del APU.
+4. Parcial de lÃ­nea con `calculateBudgetLinePartial`.
 5. Totales del borrador con `calculateBudgetTotals`.
 
-Una línea con `precio_fijado = true` conserva su precio unitario. Un recurso solo se refresca si la línea padre no está fijada, el recurso no está fijado, `autoactualizar_precio = true` y `precio_origen = 'catalogo'`.
+Una lÃ­nea con `precio_fijado = true` conserva su precio unitario. Un recurso solo se refresca si la lÃ­nea padre no estÃ¡ fijada, el recurso no estÃ¡ fijado, `autoactualizar_precio = true` y `precio_origen = 'catalogo'`.
 
-La versión oficial no ejecuta fórmulas contra el catálogo vivo al emitirse: copia los valores vigentes del borrador y congela precio interno, precio cliente, origen, cotizaciones, advertencias y motivos de precio fijado.
+La versiÃ³n oficial no ejecuta fÃ³rmulas contra el catÃ¡logo vivo al emitirse: copia los valores vigentes del borrador y congela precio interno, precio cliente, origen, cotizaciones, advertencias y motivos de precio fijado.
 
 ## Redondeo
 
-- Redondear a 2 decimales al devolver parciales y totales monetarios públicos.
-- Los totales de presupuesto se calculan desde parciales ya redondeados y devuelven subtotal, márgenes, IGV y total redondeados.
+- Redondear a 2 decimales al devolver parciales y totales monetarios pÃºblicos.
+- Los totales de presupuesto se calculan desde parciales ya redondeados y devuelven subtotal, mÃ¡rgenes, IGV y total redondeados.
 - Evitar introducir redondeos adicionales en UI o componentes visuales.
 
 ## Funciones cronograma
 
-El módulo de cronogramas usa funciones puras y testeables, sin lógica de planificación embebida en componentes visuales.
+El mÃ³dulo de cronogramas usa funciones puras y testeables, sin lÃ³gica de planificaciÃ³n embebida en componentes visuales.
 
 Funciones implementadas:
 
 - `suggestScheduleDurationDays`
 - `calculateSchedule`
 
-### Duración sugerida
+### DuraciÃ³n sugerida
 
 ```text
 duracion_sugerida_dias = ceil(metrado / rendimiento)
 ```
 
-La duración sugerida solo aplica si `metrado > 0` y `rendimiento > 0`. Si el rendimiento está vacío, no finito o en cero, el usuario debe ingresar duración manual.
+La duraciÃ³n sugerida solo aplica si `metrado > 0` y `rendimiento > 0`. Si el rendimiento estÃ¡ vacÃ­o, no finito o en cero, el usuario debe ingresar duraciÃ³n manual.
 
 ### Dependencias MVP
 
-El MVP usa dependencias fin-a-inicio y días calendario:
+El MVP usa dependencias fin-a-inicio y dÃ­as calendario:
 
 ```text
 inicio_sucesora >= fin_predecesora
 fecha_fin = fecha_inicio + duracion_dias - 1
 ```
 
-Una tarea sin dependencias puede iniciar en la fecha base del cronograma. Si tiene fecha de inicio manual posterior a sus dependencias, se respeta esa fecha; si es anterior a sus dependencias, prevalece la restricción de dependencias. Si la fecha manual es anterior al inicio del proyecto, el cálculo lanza error. Varias tareas que solapan sus intervalos se agrupan como paralelas aunque tengan distinta profundidad de dependencias.
+Una tarea sin dependencias puede iniciar en la fecha base del cronograma. Si tiene fecha de inicio manual posterior a sus dependencias, se respeta esa fecha; si es anterior a sus dependencias, prevalece la restricciÃ³n de dependencias. Si la fecha manual es anterior al inicio del proyecto, el cÃ¡lculo lanza error. Varias tareas que solapan sus intervalos se agrupan como paralelas aunque tengan distinta profundidad de dependencias.
 
 ### Orden, validaciones y errores
 
 `calculateSchedule` valida que:
 
-- Todas las tareas tengan duración mayor que 0; se permiten fracciones positivas como `0.5`.
+- Todas las tareas tengan duraciÃ³n mayor que 0; se permiten fracciones positivas como `0.5`.
 - La fecha manual de inicio no sea anterior a la fecha base del proyecto.
 - Las dependencias apunten a tareas existentes.
-- Una tarea no dependa de sí misma.
+- Una tarea no dependa de sÃ­ misma.
 - No existan ciclos en el grafo de dependencias.
 
-El orden topológico se devuelve para que la UI liste una secuencia recomendada sin recalcular dependencias.
+El orden topolÃ³gico se devuelve para que la UI liste una secuencia recomendada sin recalcular dependencias.
 
-### Ruta crítica
+### Ruta crÃ­tica
 
-La ruta crítica se define como el conjunto de tareas con holgura cero dentro del camino que determina la fecha fin del cronograma.
+La ruta crÃ­tica se define como el conjunto de tareas con holgura cero dentro del camino que determina la fecha fin del cronograma.
 
 ```text
 holgura = inicio_tardio - inicio_temprano
 tarea_critica = holgura == 0
 ```
 
-La función devuelve fechas tempranas, fechas tardías, holgura, tareas críticas, duración total del cronograma y grupos paralelos para que la UI solo renderice resultados.
+La funciÃ³n devuelve fechas tempranas, fechas tardÃ­as, holgura, tareas crÃ­ticas, duraciÃ³n total del cronograma y grupos paralelos para que la UI solo renderice resultados.

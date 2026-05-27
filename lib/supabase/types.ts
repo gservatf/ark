@@ -250,52 +250,93 @@ export type Database = {
         }
         Relationships: []
       }
+      partida_categorias: {
+        Row: {
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_registro"]
+          id: string
+          nombre: string
+          organizacion_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_registro"]
+          id?: string
+          nombre: string
+          organizacion_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_registro"]
+          id?: string
+          nombre?: string
+          organizacion_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partida_categorias_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partida_recursos: {
         Row: {
           cantidad: number
+          cantidad_base: number | null
           costo_transporte_snapshot: number
           costo_unitario_snapshot: number
           created_at: string
-          desperdicio_porcentaje: number
+          cuadrilla: number | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
           id: string
           orden: number
           parcial: number
           partida_id: string
+          porcentaje_aplicado: number | null
           recurso_id: string
-          rendimiento_factor: number | null
+          tipo_calculo_apu: Database["public"]["Enums"]["tipo_calculo_apu"]
           unidad: string
           updated_at: string
         }
         Insert: {
           cantidad: number
+          cantidad_base?: number | null
           costo_transporte_snapshot?: number
           costo_unitario_snapshot: number
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
           id?: string
           orden?: number
           parcial?: number
           partida_id: string
+          porcentaje_aplicado?: number | null
           recurso_id: string
-          rendimiento_factor?: number | null
+          tipo_calculo_apu: Database["public"]["Enums"]["tipo_calculo_apu"]
           unidad: string
           updated_at?: string
         }
         Update: {
           cantidad?: number
+          cantidad_base?: number | null
           costo_transporte_snapshot?: number
           costo_unitario_snapshot?: number
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           grupo?: Database["public"]["Enums"]["grupo_apu"]
           id?: string
           orden?: number
           parcial?: number
           partida_id?: string
+          porcentaje_aplicado?: number | null
           recurso_id?: string
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?: Database["public"]["Enums"]["tipo_calculo_apu"]
           unidad?: string
           updated_at?: string
         }
@@ -316,58 +357,136 @@ export type Database = {
           },
         ]
       }
-      partidas: {
+      partida_subcategorias: {
         Row: {
-          categoria: string | null
-          codigo: string
+          categoria_id: string
           created_at: string
-          cuadrilla: string | null
-          descripcion: string | null
-          especificaciones: string | null
           estado: Database["public"]["Enums"]["estado_registro"]
           id: string
           nombre: string
+          organizacion_id: string
+          updated_at: string
+        }
+        Insert: {
+          categoria_id: string
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_registro"]
+          id?: string
+          nombre: string
+          organizacion_id: string
+          updated_at?: string
+        }
+        Update: {
+          categoria_id?: string
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_registro"]
+          id?: string
+          nombre?: string
+          organizacion_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partida_subcategorias_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "partida_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partida_subcategorias_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partidas: {
+        Row: {
+          categoria: string | null
+          categoria_id: string | null
+          codigo: string | null
+          created_at: string
+          desperdicio_materiales_porcentaje: number
+          especificaciones: string | null
+          estado: Database["public"]["Enums"]["estado_registro"]
+          id: string
+          jornada_horas: number
+          nombre: string
           organizacion_id: string | null
           rendimiento: number | null
+          subcategoria: string | null
+          subcategoria_id: string | null
           unidad: string
+          unidad_id: string | null
           updated_at: string
         }
         Insert: {
           categoria?: string | null
-          codigo: string
+          categoria_id?: string | null
+          codigo?: string | null
           created_at?: string
-          cuadrilla?: string | null
-          descripcion?: string | null
+          desperdicio_materiales_porcentaje?: number
           especificaciones?: string | null
           estado?: Database["public"]["Enums"]["estado_registro"]
           id?: string
+          jornada_horas?: number
           nombre: string
           organizacion_id?: string | null
           rendimiento?: number | null
+          subcategoria?: string | null
+          subcategoria_id?: string | null
           unidad: string
+          unidad_id?: string | null
           updated_at?: string
         }
         Update: {
           categoria?: string | null
-          codigo?: string
+          categoria_id?: string | null
+          codigo?: string | null
           created_at?: string
-          cuadrilla?: string | null
-          descripcion?: string | null
+          desperdicio_materiales_porcentaje?: number
           especificaciones?: string | null
           estado?: Database["public"]["Enums"]["estado_registro"]
           id?: string
+          jornada_horas?: number
           nombre?: string
           organizacion_id?: string | null
           rendimiento?: number | null
+          subcategoria?: string | null
+          subcategoria_id?: string | null
           unidad?: string
+          unidad_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "partidas_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "partida_categorias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partidas_organizacion_id_fkey"
             columns: ["organizacion_id"]
             isOneToOne: false
             referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partidas_subcategoria_id_fkey"
+            columns: ["subcategoria_id"]
+            isOneToOne: false
+            referencedRelation: "partida_subcategorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partidas_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
             referencedColumns: ["id"]
           },
         ]
@@ -376,12 +495,13 @@ export type Database = {
         Row: {
           autoactualizar_precio: boolean
           cantidad: number
+          cantidad_base: number | null
           costo_transporte_actual: number
           costo_unitario_actual: number
           cotizacion_cliente_id: string | null
           cotizacion_interna_id: string | null
           created_at: string
-          desperdicio_porcentaje: number
+          cuadrilla: number | null
           fecha_precio_snapshot: string | null
           fuente_precio_snapshot: string | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
@@ -392,6 +512,7 @@ export type Database = {
           orden: number
           parcial_actual: number
           partida_recurso_id: string | null
+          porcentaje_aplicado: number | null
           precio_cliente_actual: number | null
           precio_cliente_advertencia: string | null
           precio_cliente_origen: string | null
@@ -403,7 +524,9 @@ export type Database = {
           proveedor_id_snapshot: string | null
           proveedor_nombre_snapshot: string | null
           recurso_id: string | null
-          rendimiento_factor: number | null
+          tipo_calculo_apu:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot: Database["public"]["Enums"]["tipo_recurso"]
           unidad: string
           unidad_snapshot: string
@@ -412,12 +535,13 @@ export type Database = {
         Insert: {
           autoactualizar_precio?: boolean
           cantidad: number
+          cantidad_base?: number | null
           costo_transporte_actual?: number
           costo_unitario_actual: number
           cotizacion_cliente_id?: string | null
           cotizacion_interna_id?: string | null
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           fecha_precio_snapshot?: string | null
           fuente_precio_snapshot?: string | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
@@ -428,6 +552,7 @@ export type Database = {
           orden?: number
           parcial_actual: number
           partida_recurso_id?: string | null
+          porcentaje_aplicado?: number | null
           precio_cliente_actual?: number | null
           precio_cliente_advertencia?: string | null
           precio_cliente_origen?: string | null
@@ -439,7 +564,9 @@ export type Database = {
           proveedor_id_snapshot?: string | null
           proveedor_nombre_snapshot?: string | null
           recurso_id?: string | null
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot: Database["public"]["Enums"]["tipo_recurso"]
           unidad: string
           unidad_snapshot: string
@@ -448,12 +575,13 @@ export type Database = {
         Update: {
           autoactualizar_precio?: boolean
           cantidad?: number
+          cantidad_base?: number | null
           costo_transporte_actual?: number
           costo_unitario_actual?: number
           cotizacion_cliente_id?: string | null
           cotizacion_interna_id?: string | null
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           fecha_precio_snapshot?: string | null
           fuente_precio_snapshot?: string | null
           grupo?: Database["public"]["Enums"]["grupo_apu"]
@@ -464,6 +592,7 @@ export type Database = {
           orden?: number
           parcial_actual?: number
           partida_recurso_id?: string | null
+          porcentaje_aplicado?: number | null
           precio_cliente_actual?: number | null
           precio_cliente_advertencia?: string | null
           precio_cliente_origen?: string | null
@@ -475,7 +604,9 @@ export type Database = {
           proveedor_id_snapshot?: string | null
           proveedor_nombre_snapshot?: string | null
           recurso_id?: string | null
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot?: Database["public"]["Enums"]["tipo_recurso"]
           unidad?: string
           unidad_snapshot?: string
@@ -539,10 +670,10 @@ export type Database = {
           categoria_snapshot: string | null
           codigo_snapshot: string
           created_at: string
-          cuadrilla_snapshot: string | null
-          descripcion_snapshot: string | null
+          desperdicio_materiales_porcentaje_snapshot: number | null
           especificaciones_snapshot: string | null
           id: string
+          jornada_horas_snapshot: number | null
           metrado: number
           motivo_precio_fijado: string | null
           nombre_snapshot: string
@@ -554,6 +685,7 @@ export type Database = {
           precio_unitario_actual: number
           presupuesto_borrador_id: string
           rendimiento_snapshot: number | null
+          subcategoria_snapshot: string | null
           unidad_snapshot: string
           updated_at: string
         }
@@ -562,10 +694,10 @@ export type Database = {
           categoria_snapshot?: string | null
           codigo_snapshot: string
           created_at?: string
-          cuadrilla_snapshot?: string | null
-          descripcion_snapshot?: string | null
+          desperdicio_materiales_porcentaje_snapshot?: number | null
           especificaciones_snapshot?: string | null
           id?: string
+          jornada_horas_snapshot?: number | null
           metrado: number
           motivo_precio_fijado?: string | null
           nombre_snapshot: string
@@ -577,6 +709,7 @@ export type Database = {
           precio_unitario_actual: number
           presupuesto_borrador_id: string
           rendimiento_snapshot?: number | null
+          subcategoria_snapshot?: string | null
           unidad_snapshot: string
           updated_at?: string
         }
@@ -585,10 +718,10 @@ export type Database = {
           categoria_snapshot?: string | null
           codigo_snapshot?: string
           created_at?: string
-          cuadrilla_snapshot?: string | null
-          descripcion_snapshot?: string | null
+          desperdicio_materiales_porcentaje_snapshot?: number | null
           especificaciones_snapshot?: string | null
           id?: string
+          jornada_horas_snapshot?: number | null
           metrado?: number
           motivo_precio_fijado?: string | null
           nombre_snapshot?: string
@@ -600,6 +733,7 @@ export type Database = {
           precio_unitario_actual?: number
           presupuesto_borrador_id?: string
           rendimiento_snapshot?: number | null
+          subcategoria_snapshot?: string | null
           unidad_snapshot?: string
           updated_at?: string
         }
@@ -710,10 +844,11 @@ export type Database = {
       presupuesto_partida_recursos: {
         Row: {
           cantidad: number
+          cantidad_base: number | null
           costo_transporte_snapshot: number
           costo_unitario_snapshot: number
           created_at: string
-          desperdicio_porcentaje: number
+          cuadrilla: number | null
           fecha_precio_snapshot: string | null
           fuente_precio_snapshot: string | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
@@ -722,22 +857,26 @@ export type Database = {
           orden: number
           parcial_snapshot: number
           partida_recurso_id: string | null
+          porcentaje_aplicado: number | null
           presupuesto_id: string
           presupuesto_partida_id: string
           proveedor_id_snapshot: string | null
           proveedor_nombre_snapshot: string | null
           recurso_id: string | null
-          rendimiento_factor: number | null
+          tipo_calculo_apu:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot: Database["public"]["Enums"]["tipo_recurso"]
           unidad: string
           unidad_snapshot: string
         }
         Insert: {
           cantidad: number
+          cantidad_base?: number | null
           costo_transporte_snapshot?: number
           costo_unitario_snapshot: number
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           fecha_precio_snapshot?: string | null
           fuente_precio_snapshot?: string | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
@@ -746,22 +885,26 @@ export type Database = {
           orden?: number
           parcial_snapshot: number
           partida_recurso_id?: string | null
+          porcentaje_aplicado?: number | null
           presupuesto_id: string
           presupuesto_partida_id: string
           proveedor_id_snapshot?: string | null
           proveedor_nombre_snapshot?: string | null
           recurso_id?: string | null
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot: Database["public"]["Enums"]["tipo_recurso"]
           unidad: string
           unidad_snapshot: string
         }
         Update: {
           cantidad?: number
+          cantidad_base?: number | null
           costo_transporte_snapshot?: number
           costo_unitario_snapshot?: number
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           fecha_precio_snapshot?: string | null
           fuente_precio_snapshot?: string | null
           grupo?: Database["public"]["Enums"]["grupo_apu"]
@@ -770,12 +913,15 @@ export type Database = {
           orden?: number
           parcial_snapshot?: number
           partida_recurso_id?: string | null
+          porcentaje_aplicado?: number | null
           presupuesto_id?: string
           presupuesto_partida_id?: string
           proveedor_id_snapshot?: string | null
           proveedor_nombre_snapshot?: string | null
           recurso_id?: string | null
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot?: Database["public"]["Enums"]["tipo_recurso"]
           unidad?: string
           unidad_snapshot?: string
@@ -823,10 +969,10 @@ export type Database = {
           categoria_snapshot: string | null
           codigo_snapshot: string
           created_at: string
-          cuadrilla_snapshot: string | null
-          descripcion_snapshot: string | null
+          desperdicio_materiales_porcentaje_snapshot: number | null
           especificaciones_snapshot: string | null
           id: string
+          jornada_horas_snapshot: number | null
           metrado: number
           nombre_snapshot: string
           orden: number
@@ -835,6 +981,7 @@ export type Database = {
           precio_unitario_snapshot: number
           presupuesto_id: string
           rendimiento_snapshot: number | null
+          subcategoria_snapshot: string | null
           unidad_snapshot: string
           updated_at: string
         }
@@ -842,10 +989,10 @@ export type Database = {
           categoria_snapshot?: string | null
           codigo_snapshot: string
           created_at?: string
-          cuadrilla_snapshot?: string | null
-          descripcion_snapshot?: string | null
+          desperdicio_materiales_porcentaje_snapshot?: number | null
           especificaciones_snapshot?: string | null
           id?: string
+          jornada_horas_snapshot?: number | null
           metrado: number
           nombre_snapshot: string
           orden?: number
@@ -854,6 +1001,7 @@ export type Database = {
           precio_unitario_snapshot: number
           presupuesto_id: string
           rendimiento_snapshot?: number | null
+          subcategoria_snapshot?: string | null
           unidad_snapshot: string
           updated_at?: string
         }
@@ -861,10 +1009,10 @@ export type Database = {
           categoria_snapshot?: string | null
           codigo_snapshot?: string
           created_at?: string
-          cuadrilla_snapshot?: string | null
-          descripcion_snapshot?: string | null
+          desperdicio_materiales_porcentaje_snapshot?: number | null
           especificaciones_snapshot?: string | null
           id?: string
+          jornada_horas_snapshot?: number | null
           metrado?: number
           nombre_snapshot?: string
           orden?: number
@@ -873,6 +1021,7 @@ export type Database = {
           precio_unitario_snapshot?: number
           presupuesto_id?: string
           rendimiento_snapshot?: number | null
+          subcategoria_snapshot?: string | null
           unidad_snapshot?: string
           updated_at?: string
         }
@@ -896,12 +1045,13 @@ export type Database = {
       presupuesto_version_partida_recursos: {
         Row: {
           cantidad: number
+          cantidad_base: number | null
           costo_transporte_snapshot: number
           costo_unitario_snapshot: number
           cotizacion_cliente_id_snapshot: string | null
           cotizacion_interna_id_snapshot: string | null
           created_at: string
-          desperdicio_porcentaje: number
+          cuadrilla: number | null
           fecha_precio_snapshot: string | null
           fuente_precio_snapshot: string | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
@@ -911,6 +1061,7 @@ export type Database = {
           orden: number
           parcial_snapshot: number
           partida_recurso_id: string | null
+          porcentaje_aplicado: number | null
           precio_cliente_advertencia_snapshot: string | null
           precio_cliente_origen_snapshot: string | null
           precio_cliente_snapshot: number | null
@@ -921,19 +1072,22 @@ export type Database = {
           proveedor_id_snapshot: string | null
           proveedor_nombre_snapshot: string | null
           recurso_id: string | null
-          rendimiento_factor: number | null
+          tipo_calculo_apu:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot: Database["public"]["Enums"]["tipo_recurso"]
           unidad: string
           unidad_snapshot: string
         }
         Insert: {
           cantidad: number
+          cantidad_base?: number | null
           costo_transporte_snapshot?: number
           costo_unitario_snapshot: number
           cotizacion_cliente_id_snapshot?: string | null
           cotizacion_interna_id_snapshot?: string | null
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           fecha_precio_snapshot?: string | null
           fuente_precio_snapshot?: string | null
           grupo: Database["public"]["Enums"]["grupo_apu"]
@@ -943,6 +1097,7 @@ export type Database = {
           orden?: number
           parcial_snapshot: number
           partida_recurso_id?: string | null
+          porcentaje_aplicado?: number | null
           precio_cliente_advertencia_snapshot?: string | null
           precio_cliente_origen_snapshot?: string | null
           precio_cliente_snapshot?: number | null
@@ -953,19 +1108,22 @@ export type Database = {
           proveedor_id_snapshot?: string | null
           proveedor_nombre_snapshot?: string | null
           recurso_id?: string | null
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot: Database["public"]["Enums"]["tipo_recurso"]
           unidad: string
           unidad_snapshot: string
         }
         Update: {
           cantidad?: number
+          cantidad_base?: number | null
           costo_transporte_snapshot?: number
           costo_unitario_snapshot?: number
           cotizacion_cliente_id_snapshot?: string | null
           cotizacion_interna_id_snapshot?: string | null
           created_at?: string
-          desperdicio_porcentaje?: number
+          cuadrilla?: number | null
           fecha_precio_snapshot?: string | null
           fuente_precio_snapshot?: string | null
           grupo?: Database["public"]["Enums"]["grupo_apu"]
@@ -975,6 +1133,7 @@ export type Database = {
           orden?: number
           parcial_snapshot?: number
           partida_recurso_id?: string | null
+          porcentaje_aplicado?: number | null
           precio_cliente_advertencia_snapshot?: string | null
           precio_cliente_origen_snapshot?: string | null
           precio_cliente_snapshot?: number | null
@@ -985,7 +1144,9 @@ export type Database = {
           proveedor_id_snapshot?: string | null
           proveedor_nombre_snapshot?: string | null
           recurso_id?: string | null
-          rendimiento_factor?: number | null
+          tipo_calculo_apu?:
+            | Database["public"]["Enums"]["tipo_calculo_apu"]
+            | null
           tipo_snapshot?: Database["public"]["Enums"]["tipo_recurso"]
           unidad?: string
           unidad_snapshot?: string
@@ -1047,10 +1208,10 @@ export type Database = {
           categoria_snapshot: string | null
           codigo_snapshot: string
           created_at: string
-          cuadrilla_snapshot: string | null
-          descripcion_snapshot: string | null
+          desperdicio_materiales_porcentaje_snapshot: number | null
           especificaciones_snapshot: string | null
           id: string
+          jornada_horas_snapshot: number | null
           metrado: number
           motivo_precio_fijado_snapshot: string | null
           nombre_snapshot: string
@@ -1062,16 +1223,17 @@ export type Database = {
           precio_unitario_snapshot: number
           presupuesto_version_id: string
           rendimiento_snapshot: number | null
+          subcategoria_snapshot: string | null
           unidad_snapshot: string
         }
         Insert: {
           categoria_snapshot?: string | null
           codigo_snapshot: string
           created_at?: string
-          cuadrilla_snapshot?: string | null
-          descripcion_snapshot?: string | null
+          desperdicio_materiales_porcentaje_snapshot?: number | null
           especificaciones_snapshot?: string | null
           id?: string
+          jornada_horas_snapshot?: number | null
           metrado: number
           motivo_precio_fijado_snapshot?: string | null
           nombre_snapshot: string
@@ -1083,16 +1245,17 @@ export type Database = {
           precio_unitario_snapshot: number
           presupuesto_version_id: string
           rendimiento_snapshot?: number | null
+          subcategoria_snapshot?: string | null
           unidad_snapshot: string
         }
         Update: {
           categoria_snapshot?: string | null
           codigo_snapshot?: string
           created_at?: string
-          cuadrilla_snapshot?: string | null
-          descripcion_snapshot?: string | null
+          desperdicio_materiales_porcentaje_snapshot?: number | null
           especificaciones_snapshot?: string | null
           id?: string
+          jornada_horas_snapshot?: number | null
           metrado?: number
           motivo_precio_fijado_snapshot?: string | null
           nombre_snapshot?: string
@@ -1104,6 +1267,7 @@ export type Database = {
           precio_unitario_snapshot?: number
           presupuesto_version_id?: string
           rendimiento_snapshot?: number | null
+          subcategoria_snapshot?: string | null
           unidad_snapshot?: string
         }
         Relationships: [
@@ -1588,6 +1752,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_recurso"]
           transporte_aplica: boolean
           unidad: string
+          unidad_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1606,6 +1771,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_recurso"]
           transporte_aplica?: boolean
           unidad: string
+          unidad_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1624,6 +1790,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_recurso"]
           transporte_aplica?: boolean
           unidad?: string
+          unidad_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1639,6 +1806,54 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recursos_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unidades_medida: {
+        Row: {
+          codigo: string
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_registro"]
+          id: string
+          nombre: string
+          organizacion_id: string
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_registro"]
+          id?: string
+          nombre: string
+          organizacion_id: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          estado?: Database["public"]["Enums"]["estado_registro"]
+          id?: string
+          nombre?: string
+          organizacion_id?: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unidades_medida_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
             referencedColumns: ["id"]
           },
         ]
@@ -2012,6 +2227,12 @@ export type Database = {
       precio_origen: "catalogo" | "manual" | "snapshot"
       rol_organizacion: "owner" | "admin" | "miembro"
       rol_proyecto: "admin" | "presupuestador" | "editor" | "lector"
+      tipo_calculo_apu:
+        | "mano_obra_rendimiento"
+        | "material_desperdicio"
+        | "equipo_hm_rendimiento"
+        | "equipo_cantidad_fija"
+        | "herramientas_porcentaje_mano_obra"
       tipo_organizacion: "personal" | "empresa"
       tipo_recurso: "material" | "mano_obra" | "equipo" | "herramienta"
     }
@@ -2159,6 +2380,13 @@ export const Constants = {
       precio_origen: ["catalogo", "manual", "snapshot"],
       rol_organizacion: ["owner", "admin", "miembro"],
       rol_proyecto: ["admin", "presupuestador", "editor", "lector"],
+      tipo_calculo_apu: [
+        "mano_obra_rendimiento",
+        "material_desperdicio",
+        "equipo_hm_rendimiento",
+        "equipo_cantidad_fija",
+        "herramientas_porcentaje_mano_obra",
+      ],
       tipo_organizacion: ["personal", "empresa"],
       tipo_recurso: ["material", "mano_obra", "equipo", "herramienta"],
     },

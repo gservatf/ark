@@ -165,32 +165,26 @@ describe("form validations", () => {
 
   it("valida builder APU con strings numericos y recurso obligatorio", () => {
     const parsed = validateFormData(partidaApuResourceFormSchema, {
-      cantidad: "2",
-      desperdicio_porcentaje: "10",
+      cantidad_base: "2",
       grupo: "materiales",
       partida_id: "part-1",
       recurso_id: "rec-1",
-      rendimiento_factor: "1.5"
+      tipo_calculo_apu: "material_desperdicio"
     });
 
     expect(parsed.errors).toEqual({});
-    expect(parsed.data?.cantidad).toBe(2);
-    expect(parsed.data?.desperdicio_porcentaje).toBe(10);
-    expect(parsed.data?.rendimiento_factor).toBe(1.5);
+    expect(parsed.data?.cantidad_base).toBe(2);
 
     const invalid = validateFormData(partidaApuResourceFormSchema, {
-      cantidad: "2",
-      desperdicio_porcentaje: "101",
       grupo: "materiales",
       partida_id: "part-1",
       recurso_id: "",
-      rendimiento_factor: "0"
+      tipo_calculo_apu: "material_desperdicio"
     });
 
     expect(invalid.errors).toMatchObject({
-      desperdicio_porcentaje: "El desperdicio debe estar entre 0 y 100.",
-      recurso_id: "El recurso es obligatorio.",
-      rendimiento_factor: "El factor de rendimiento debe ser mayor que 0."
+      cantidad_base: "La cantidad es obligatoria para este recurso.",
+      recurso_id: "El recurso es obligatorio."
     });
   });
 });

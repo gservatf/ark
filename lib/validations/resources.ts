@@ -4,6 +4,7 @@ import {
   baseEntitySchema,
   coercedNonNegativeNumber,
   estadoRegistroSchema,
+  optionalNullableId,
   optionalNullableString,
   requiredString,
   tipoRecursoSchema
@@ -13,6 +14,7 @@ export const recursoInputSchema = z.object({
   nombre: requiredString("El nombre"),
   tipo: tipoRecursoSchema,
   unidad: requiredString("La unidad"),
+  unidad_id: optionalNullableId(),
   costo_unitario_actual: coercedNonNegativeNumber("El costo unitario"),
   proveedor_id: optionalNullableString(),
   transporte_aplica: z.boolean(),

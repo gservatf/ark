@@ -7,6 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   ApuBuilderPanel,
+  buildApuFormFromResource,
+  defaultApuFormForGroup,
   type ApuBuilderFormState
 } from "@/components/partidas/ApuBuilderPanel";
 import { ApuResourcesTable } from "@/components/partidas/ApuResourcesTable";
@@ -38,7 +40,6 @@ import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { usePresenceChannel } from "@/lib/realtime/usePresenceChannel";
 import { createBrowserClient } from "@/lib/supabase/browser";
-import { apuPreviewPercentageSchema } from "@/lib/validations/budgets";
 import { validateFormData } from "@/lib/validations/form";
 import {
   partidaApuResourceFormSchema,
@@ -58,13 +59,12 @@ type WorkspaceState = {
 };
 
 const baseForm: ApuBuilderFormState = {
-  cantidad: "1",
-  desperdicio_porcentaje: "0",
-  gastos_generales_porcentaje: "10",
+  cantidad_base: "1",
+  cuadrilla: "1",
   grupo: "materiales",
+  porcentaje_aplicado: "3",
   recurso_id: "",
-  rendimiento_factor: "1",
-  utilidad_porcentaje: "10"
+  tipo_calculo_apu: "material_desperdicio"
 };
 
 export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
@@ -160,9 +160,9 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
     viewing: presenceTarget
   });
 
-  const directTotals = useMemo(() => calculateApuDirectCost(apuResources), [apuResources]);
-  const gastosGenerales = safePercentage(form.gastos_generales_porcentaje);
-  const utilidad = safePercentage(form.utilidad_porcentaje);
+  const directTotals = useMemo(() => calculateApuDirectCost(apuResources, partida || undefined), [apuResources, partida]);
+  const gastosGenerales = 0;
+  const utilidad = 0;
   const unitPrice = calculateApuUnitPrice({
     costo_directo: directTotals.costo_directo,
     gastos_generales_porcentaje: gastosGenerales,
@@ -175,11 +175,17 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
   ) {
     const nextForm = { ...form, [field]: value };
 
+    if (field === "grupo") {
+      Object.assign(nextForm, defaultApuFormForGroup(value as GrupoApu), {
+        recurso_id: ""
+      });
+    }
+
     if (field === "recurso_id") {
       const resource = catalogResources.find((item) => item.id === value);
 
       if (resource) {
-        nextForm.grupo = mapResourceTypeToApuGroup(resource);
+        Object.assign(nextForm, buildApuFormFromResource(resource));
       }
     }
 
@@ -203,13 +209,14 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
     const validation = validateFormData<typeof partidaApuResourceFormSchema, keyof ApuBuilderFormState>(
       partidaApuResourceFormSchema,
       {
-        cantidad: form.cantidad,
-        desperdicio_porcentaje: form.desperdicio_porcentaje,
+        cantidad_base: form.cantidad_base,
+        cuadrilla: form.cuadrilla,
         grupo: form.grupo,
         orden: editingId ? undefined : apuResources.length + 1,
         partida_id: partida.id,
+        porcentaje_aplicado: form.porcentaje_aplicado,
         recurso_id: form.recurso_id,
-        rendimiento_factor: form.rendimiento_factor
+        tipo_calculo_apu: form.tipo_calculo_apu
       }
     );
 
@@ -249,11 +256,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
         : [...current, result.data].sort((a, b) => a.orden - b.orden)
     );
     setEditingId(null);
-    setForm({
-      ...baseForm,
-      gastos_generales_porcentaje: form.gastos_generales_porcentaje,
-      utilidad_porcentaje: form.utilidad_porcentaje
-    });
+    setForm(baseForm);
     setFormErrors({});
   }
 
@@ -265,13 +268,12 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
 
     setEditingId(resource.id);
     setForm({
-      cantidad: String(resource.cantidad),
-      desperdicio_porcentaje: String(resource.desperdicio_porcentaje),
-      gastos_generales_porcentaje: form.gastos_generales_porcentaje,
+      cantidad_base: String(resource.cantidad_base ?? resource.cantidad),
+      cuadrilla: String(resource.cuadrilla ?? ""),
       grupo: resource.grupo,
+      porcentaje_aplicado: String(resource.porcentaje_aplicado ?? 3),
       recurso_id: resource.recurso_id,
-      rendimiento_factor: String(resource.rendimiento_factor ?? 1),
-      utilidad_porcentaje: form.utilidad_porcentaje
+      tipo_calculo_apu: resource.tipo_calculo_apu
     });
     setFormErrors({});
     setMutationError(null);
@@ -376,11 +378,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
 
   function cancelEdit() {
     setEditingId(null);
-    setForm({
-      ...baseForm,
-      gastos_generales_porcentaje: form.gastos_generales_porcentaje,
-      utilidad_porcentaje: form.utilidad_porcentaje
-    });
+    setForm(baseForm);
     setFormErrors({});
     setMutationError(null);
   }
@@ -498,7 +496,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
           backLink={{ href: "/partidas", label: "Volver a partidas" }}
           breadcrumbs={[
             { label: "Partidas / APU" },
-            { label: partida.codigo },
+            { label: partida.codigo || "Sin codigo" },
             { label: "Detalle" }
           ]}
           title={partida.nombre}
@@ -511,17 +509,20 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
         ) : null}
 
         <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-soft md:grid-cols-2 xl:grid-cols-4">
-          <InfoBlock label="Código" value={partida.codigo} />
+          <InfoBlock label="Codigo" value={partida.codigo || "Sin codigo"} />
           <InfoBlock label="Unidad" value={partida.unidad} />
           <InfoBlock label="Categoria" value={partida.categoria || "Sin categoria"} />
+          <InfoBlock label="Subcategoria" value={partida.subcategoria || "Sin subcategoria"} />
           <InfoBlock
             label="Rendimiento"
             value={partida.rendimiento ? `${formatNumber(partida.rendimiento)} ${partida.unidad} / jor` : "Sin dato"}
           />
+          <InfoBlock label="Jornada" value={`${formatNumber(partida.jornada_horas)} hr/dia`} />
+          <InfoBlock label="Desperdicio materiales" value={`${formatNumber(partida.desperdicio_materiales_porcentaje)}%`} />
           <div className="md:col-span-2 xl:col-span-4">
             <p className="text-xs font-bold uppercase text-slate-500">Especificaciones</p>
             <p className="mt-2 text-sm leading-6 text-slate-700">
-              {partida.especificaciones || partida.descripcion || "Sin especificaciones registradas."}
+              {partida.especificaciones || "Sin especificaciones registradas."}
             </p>
           </div>
         </section>
@@ -570,24 +571,6 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
       <p className="mt-1 font-bold text-slate-900">{value}</p>
     </div>
   );
-}
-
-function safePercentage(value: string) {
-  const parsed = apuPreviewPercentageSchema.safeParse({ porcentaje: value });
-
-  return parsed.success ? parsed.data.porcentaje : 0;
-}
-
-function mapResourceTypeToApuGroup(resource: Recurso): GrupoApu {
-  if (resource.tipo === "material") {
-    return "materiales";
-  }
-
-  if (resource.tipo === "mano_obra") {
-    return "mano_obra";
-  }
-
-  return "equipos_herramientas";
 }
 
 function errorMessage(error: DataError) {

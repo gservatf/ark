@@ -175,7 +175,7 @@ export function PresupuestosWorkspace({ requestedProjectId }: { requestedProject
       ubicacion: bundleResult.data.draft.ubicacion || "",
       utilidad_porcentaje: String(bundleResult.data.draft.utilidad_porcentaje)
     });
-    setPartidas((partidasResult.data || []) as Partida[]);
+    setPartidas((partidasResult.data || []) as unknown as Partida[]);
     setSelectedLineId((current) =>
       current && bundleResult.data.lines.some((line) => line.id === current)
         ? current
@@ -1305,10 +1305,10 @@ function draftLineToBudgetLine(line: PresupuestoBorradorPartida): PresupuestoPar
   return {
     categoria_snapshot: line.categoria_snapshot,
     codigo_snapshot: line.codigo_snapshot,
-    cuadrilla_snapshot: line.cuadrilla_snapshot,
-    descripcion_snapshot: line.descripcion_snapshot,
+    desperdicio_materiales_porcentaje_snapshot: line.desperdicio_materiales_porcentaje_snapshot,
     especificaciones_snapshot: line.especificaciones_snapshot,
     id: line.id,
+    jornada_horas_snapshot: line.jornada_horas_snapshot,
     metrado: line.metrado,
     nombre_snapshot: line.nombre_snapshot,
     orden: line.orden,
@@ -1317,6 +1317,7 @@ function draftLineToBudgetLine(line: PresupuestoBorradorPartida): PresupuestoPar
     presupuesto_id: line.presupuesto_borrador_id,
     precio_unitario_snapshot: line.precio_unitario_actual,
     rendimiento_snapshot: line.rendimiento_snapshot,
+    subcategoria_snapshot: line.subcategoria_snapshot,
     unidad_snapshot: line.unidad_snapshot
   } as PresupuestoPartida;
 }
@@ -1326,9 +1327,10 @@ function draftResourceToSnapshot(
 ): PresupuestoPartidaRecursoSnapshot {
   return {
     cantidad: resource.cantidad,
+    cantidad_base: resource.cantidad_base,
     costo_transporte_snapshot: resource.costo_transporte_actual,
     costo_unitario_snapshot: resource.costo_unitario_actual,
-    desperdicio_porcentaje: resource.desperdicio_porcentaje,
+    cuadrilla: resource.cuadrilla,
     fecha_precio_snapshot: resource.fecha_precio_snapshot,
     fuente_precio_snapshot: resource.fuente_precio_snapshot,
     grupo: resource.grupo,
@@ -1336,13 +1338,14 @@ function draftResourceToSnapshot(
     nombre_snapshot: resource.nombre_snapshot,
     orden: resource.orden,
     parcial_snapshot: resource.parcial_actual,
+    porcentaje_aplicado: resource.porcentaje_aplicado,
     partida_recurso_id: resource.partida_recurso_id || "",
     presupuesto_id: resource.presupuesto_borrador_id,
     presupuesto_partida_id: resource.presupuesto_borrador_partida_id,
     proveedor_id_snapshot: resource.proveedor_id_snapshot,
     proveedor_nombre_snapshot: resource.proveedor_nombre_snapshot,
     recurso_id: resource.recurso_id || "",
-    rendimiento_factor: resource.rendimiento_factor,
+    tipo_calculo_apu: resource.tipo_calculo_apu,
     tipo_snapshot: resource.tipo_snapshot,
     unidad: resource.unidad,
     unidad_snapshot: resource.unidad_snapshot

@@ -5,6 +5,13 @@ export const estadoPresupuestoSchema = z.enum(["borrador", "aprobado", "archivad
 export const grupoApuSchema = z.enum(["materiales", "mano_obra", "equipos_herramientas"]);
 export const monedaSchema = z.enum(["PEN"]);
 export const tipoRecursoSchema = z.enum(["material", "mano_obra", "equipo", "herramienta"]);
+export const tipoCalculoApuSchema = z.enum([
+  "mano_obra_rendimiento",
+  "material_desperdicio",
+  "equipo_hm_rendimiento",
+  "equipo_cantidad_fija",
+  "herramientas_porcentaje_mano_obra"
+]);
 
 export const isoDateStringSchema = z.string().trim().min(1, "La fecha es obligatoria.");
 
@@ -42,6 +49,13 @@ export function optionalNullableString() {
   return z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().trim().optional().nullable()
+  );
+}
+
+export function optionalNullableId() {
+  return z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().uuid("El ID seleccionado no es valido.").optional().nullable()
   );
 }
 

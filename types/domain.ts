@@ -26,6 +26,13 @@ export type TipoRecurso = "material" | "mano_obra" | "equipo" | "herramienta";
 
 export type GrupoApu = "materiales" | "mano_obra" | "equipos_herramientas";
 
+export type TipoCalculoApu =
+  | "mano_obra_rendimiento"
+  | "material_desperdicio"
+  | "equipo_hm_rendimiento"
+  | "equipo_cantidad_fija"
+  | "herramientas_porcentaje_mano_obra";
+
 export type ISODateString = string;
 
 export interface BaseEntity {
@@ -52,6 +59,7 @@ export interface Recurso extends BaseEntity {
   nombre: string;
   tipo: TipoRecurso;
   unidad: string;
+  unidad_id?: string | null;
   costo_unitario_actual: number;
   proveedor_id?: string | null;
   transporte_aplica: boolean;
@@ -106,16 +114,41 @@ export interface RecursoSnapshot {
   fecha_precio_snapshot?: ISODateString | null;
 }
 
-export interface Partida extends BaseEntity {
-  organizacion_id?: string | null;
+export interface PartidaCategoria extends BaseEntity {
+  organizacion_id: string;
+  nombre: string;
+  estado: EstadoRegistro;
+}
+
+export interface PartidaSubcategoria extends BaseEntity {
+  organizacion_id: string;
+  categoria_id: string;
+  nombre: string;
+  estado: EstadoRegistro;
+}
+
+export interface UnidadMedida extends BaseEntity {
+  organizacion_id: string;
   codigo: string;
   nombre: string;
+  tipo?: string | null;
+  estado: EstadoRegistro;
+}
+
+export interface Partida extends BaseEntity {
+  organizacion_id?: string | null;
+  codigo?: string | null;
+  nombre: string;
   unidad: string;
+  unidad_id?: string | null;
   categoria?: string | null;
-  descripcion?: string | null;
+  categoria_id?: string | null;
+  subcategoria?: string | null;
+  subcategoria_id?: string | null;
   especificaciones?: string | null;
-  rendimiento?: number | null;
-  cuadrilla?: string | null;
+  rendimiento: number;
+  jornada_horas: number;
+  desperdicio_materiales_porcentaje: number;
   estado: EstadoPartida;
 }
 
@@ -126,12 +159,14 @@ export interface PartidaRecurso {
   partida_id: string;
   recurso_id: string;
   grupo: GrupoApu;
+  tipo_calculo_apu: TipoCalculoApu;
+  cuadrilla?: number | null;
+  cantidad_base?: number | null;
+  porcentaje_aplicado?: number | null;
   cantidad: number;
   unidad: string;
   costo_unitario_snapshot: number;
   costo_transporte_snapshot: number;
-  rendimiento_factor?: number | null;
-  desperdicio_porcentaje: number;
   parcial: number;
   orden: number;
 }
@@ -139,10 +174,12 @@ export interface PartidaRecurso {
 export interface PartidaRecursoSnapshot extends RecursoSnapshot {
   partida_recurso_id: string;
   grupo: GrupoApu;
+  tipo_calculo_apu?: TipoCalculoApu | null;
+  cuadrilla?: number | null;
+  cantidad_base?: number | null;
+  porcentaje_aplicado?: number | null;
   cantidad: number;
   unidad: string;
-  rendimiento_factor?: number | null;
-  desperdicio_porcentaje: number;
   parcial_snapshot: number;
   orden: number;
 }
@@ -153,10 +190,11 @@ export interface PartidaSnapshot {
   nombre_snapshot: string;
   unidad_snapshot: string;
   categoria_snapshot?: string | null;
-  descripcion_snapshot?: string | null;
+  subcategoria_snapshot?: string | null;
   especificaciones_snapshot?: string | null;
   rendimiento_snapshot?: number | null;
-  cuadrilla_snapshot?: string | null;
+  jornada_horas_snapshot?: number | null;
+  desperdicio_materiales_porcentaje_snapshot?: number | null;
   precio_unitario_snapshot: number;
 }
 
@@ -293,10 +331,12 @@ export type PresupuestoBorradorPartidaRecurso = BaseEntity & PrecioControl & Pre
   precio_cliente_override: boolean;
   motivo_precio_cliente_override?: string | null;
   grupo: GrupoApu;
+  tipo_calculo_apu?: TipoCalculoApu | null;
+  cuadrilla?: number | null;
+  cantidad_base?: number | null;
+  porcentaje_aplicado?: number | null;
   cantidad: number;
   unidad: string;
-  rendimiento_factor?: number | null;
-  desperdicio_porcentaje: number;
   costo_unitario_actual: number;
   costo_transporte_actual: number;
   parcial_actual: number;

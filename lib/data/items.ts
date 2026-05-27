@@ -4,7 +4,11 @@ import {
   type PartidaApuResourceFormInput,
   type PartidaInput
 } from "../validations/items";
-import { calculateApuResourcePartial } from "../calculations/apu";
+import {
+  calculateApuDirectCost,
+  calculateApuResourceValues,
+  inferApuCalculationTypeFromResource
+} from "../calculations/apu";
 import type { Partida, PartidaRecurso, Recurso } from "../../types/domain";
 
 import { getChangedFields, insertActivityEvent } from "./audit";
@@ -26,6 +30,10 @@ export type PartidaBundle = {
 
 export type PartidaUpdateInput = Partial<PartidaInput>;
 export type PartidaResourceUpdateInput = Partial<Omit<PartidaApuResourceFormInput, "partida_id">>;
+export type PartidaWithResourcesInput = {
+  partida: PartidaInput;
+  resources: PartidaApuResourceFormInput[];
+};
 
 export async function listPartidas(
   client: DataClient,
@@ -47,7 +55,7 @@ export async function listPartidas(
     return dataFailure(normalizeSupabaseError(error, "partidas.list"));
   }
 
-  return dataSuccess(data || []);
+  return dataSuccess((data || []) as unknown as Partida[]);
 }
 
 export async function getPartidaById(
@@ -80,7 +88,7 @@ export async function getPartidaById(
     return dataFailure(notFoundError("No se encontró la partida seleccionada."));
   }
 
-  return dataSuccess(data);
+  return dataSuccess(data as unknown as Partida);
 }
 
 export async function getPartidaBundle(
@@ -134,7 +142,7 @@ async function listPartidaResourcesForValidatedScope(
     return dataFailure(normalizeSupabaseError(error, "partida_recursos.list"));
   }
 
-  return dataSuccess(data || []);
+  return dataSuccess((data || []) as unknown as PartidaRecurso[]);
 }
 
 export async function listOrganizationPartidaResources(
@@ -158,7 +166,7 @@ export async function listOrganizationPartidaResources(
   }
 
   return dataSuccess(
-    ((data || []) as Array<PartidaRecurso & { partida?: unknown }>).map(
+    ((data || []) as unknown as Array<PartidaRecurso & { partida?: unknown }>).map(
       ({ partida: _partida, ...resource }) => resource
     )
   );
@@ -186,7 +194,7 @@ export async function createPartida(
     .insert({
       ...parsed.data,
       organizacion_id: scopeResult.data.organizacionId
-    })
+    } as never)
     .select("*")
     .single();
 
@@ -209,7 +217,41 @@ export async function createPartida(
     return auditResult;
   }
 
-  return dataSuccess(data);
+  return dataSuccess(data as unknown as Partida);
+}
+
+export async function createPartidaWithResources(
+  client: DataClient,
+  scope: DataScope,
+  input: PartidaWithResourcesInput
+): Promise<DataResult<PartidaBundle>> {
+  const partidaResult = await createPartida(client, scope, input.partida);
+
+  if (!partidaResult.ok) {
+    return partidaResult;
+  }
+
+  const createdResources: PartidaRecurso[] = [];
+
+  for (let index = 0; index < input.resources.length; index += 1) {
+    const resource = input.resources[index];
+    const resourceResult = await createPartidaResource(client, scope, {
+      ...resource,
+      orden: resource.orden ?? index + 1,
+      partida_id: partidaResult.data.id
+    });
+
+    if (!resourceResult.ok) {
+      return resourceResult;
+    }
+
+    createdResources.push(resourceResult.data);
+  }
+
+  return dataSuccess({
+    partida: partidaResult.data,
+    resources: createdResources
+  });
 }
 
 export async function updatePartida(
@@ -240,7 +282,7 @@ export async function updatePartida(
   const expectedUpdatedAt = getExpectedUpdatedAt(currentResult.data, options);
   const { data, error } = await client
     .from("partidas")
-    .update(parsed.data)
+    .update(parsed.data as never)
     .eq("organizacion_id", scopeResult.data.organizacionId)
     .eq("id", partidaId)
     .eq("updated_at", expectedUpdatedAt)
@@ -275,7 +317,7 @@ export async function updatePartida(
     return auditResult;
   }
 
-  return dataSuccess(data);
+  return dataSuccess(data as unknown as Partida);
 }
 
 export async function deactivatePartida(
@@ -324,13 +366,15 @@ export async function createPartidaResource(
 
   const row = buildPartidaResourceRow(
     parsed.data,
+    partidaResult.data,
     resourceResult.data,
+    existingResourcesResult.data,
     parsed.data.orden ?? existingResourcesResult.data.length + 1
   );
 
   const { data, error } = await client
     .from("partida_recursos")
-    .insert(row)
+    .insert(row as never)
     .select("*")
     .single();
 
@@ -353,7 +397,7 @@ export async function createPartidaResource(
     return auditResult;
   }
 
-  return dataSuccess(data);
+  return dataSuccess(data as unknown as PartidaRecurso);
 }
 
 export async function updatePartidaResource(
@@ -385,31 +429,46 @@ export async function updatePartidaResource(
   }
 
   const nextResourceId = parsed.data.recurso_id || currentResult.data.recurso_id;
-  const resourceResult = await getCatalogResourceById(client, scopeResult.data, nextResourceId);
+  const [currentPartidaResult, resourceResult, existingResourcesResult] = await Promise.all([
+    getPartidaById(client, scopeResult.data, currentResult.data.partida_id),
+    getCatalogResourceById(client, scopeResult.data, nextResourceId),
+    listPartidaResourcesForValidatedScope(client, currentResult.data.partida_id)
+  ]);
+
+  if (!currentPartidaResult.ok) {
+    return currentPartidaResult;
+  }
 
   if (!resourceResult.ok) {
     return resourceResult;
   }
 
+  if (!existingResourcesResult.ok) {
+    return existingResourcesResult;
+  }
+
   const updateData = buildPartidaResourceRow(
     {
-      cantidad: parsed.data.cantidad ?? currentResult.data.cantidad,
-      desperdicio_porcentaje:
-        parsed.data.desperdicio_porcentaje ?? currentResult.data.desperdicio_porcentaje,
+      cantidad_base: parsed.data.cantidad_base ?? currentResult.data.cantidad_base,
+      cuadrilla: parsed.data.cuadrilla ?? currentResult.data.cuadrilla,
       grupo: parsed.data.grupo ?? currentResult.data.grupo,
       orden: parsed.data.orden ?? currentResult.data.orden,
       partida_id: currentResult.data.partida_id,
+      porcentaje_aplicado:
+        parsed.data.porcentaje_aplicado ?? currentResult.data.porcentaje_aplicado,
       recurso_id: nextResourceId,
-      rendimiento_factor:
-        parsed.data.rendimiento_factor ?? currentResult.data.rendimiento_factor ?? 1
+      tipo_calculo_apu:
+        parsed.data.tipo_calculo_apu ?? currentResult.data.tipo_calculo_apu
     },
+    currentPartidaResult.data,
     resourceResult.data,
+    existingResourcesResult.data.filter((resource) => resource.id !== partidaResourceId),
     parsed.data.orden ?? currentResult.data.orden
   );
 
   const { data, error } = await client
     .from("partida_recursos")
-    .update(updateData)
+    .update(updateData as never)
     .eq("id", partidaResourceId)
     .eq("updated_at", expectedUpdatedAt)
     .select("*")
@@ -449,7 +508,7 @@ export async function updatePartidaResource(
     return auditResult;
   }
 
-  return dataSuccess(data);
+  return dataSuccess(data as unknown as PartidaRecurso);
 }
 
 export async function deletePartidaResource(
@@ -507,7 +566,7 @@ export async function deletePartidaResource(
     return auditResult;
   }
 
-  return dataSuccess(data);
+  return dataSuccess(data as unknown as PartidaRecurso);
 }
 
 async function getPartidaResourceById(
@@ -530,7 +589,7 @@ async function getPartidaResourceById(
     return dataFailure(notFoundError("No se encontró el recurso APU solicitado."));
   }
 
-  const { partida: _partida, ...resource } = data as PartidaRecurso & { partida?: unknown };
+  const { partida: _partida, ...resource } = data as unknown as PartidaRecurso & { partida?: unknown };
 
   return dataSuccess(resource);
 }
@@ -560,32 +619,63 @@ async function getCatalogResourceById(
 
 function buildPartidaResourceRow(
   input: PartidaApuResourceFormInput & { orden?: number },
+  partida: Partida,
   resource: Recurso,
+  currentResources: PartidaRecurso[],
   orden: number
 ): Omit<PartidaRecurso, "created_at" | "id" | "updated_at"> {
+  const tipoCalculo =
+    input.tipo_calculo_apu ||
+    inferApuCalculationTypeFromResource({
+      grupo: input.grupo,
+      unidad: resource.unidad
+    });
+  const subtotalManoObra = calculateApuDirectCost(
+    currentResources.filter((item) => item.grupo === "mano_obra"),
+    partida
+  ).costo_mano_obra;
+  const computed = calculateApuResourceValues(
+    {
+      cantidad: input.cantidad_base ?? input.cuadrilla ?? input.porcentaje_aplicado ?? 0,
+      cantidad_base: input.cantidad_base,
+      costo_transporte_snapshot: resource.costo_transporte,
+      costo_unitario_snapshot: resource.costo_unitario_actual,
+      cuadrilla: input.cuadrilla,
+      porcentaje_aplicado: input.porcentaje_aplicado,
+      tipo_calculo_apu: tipoCalculo
+    },
+    partida,
+    subtotalManoObra
+  );
   const row = {
-    cantidad: input.cantidad,
+    cantidad: computed.cantidad,
+    cantidad_base: input.cantidad_base ?? null,
     costo_transporte_snapshot: resource.costo_transporte,
     costo_unitario_snapshot: resource.costo_unitario_actual,
-    desperdicio_porcentaje: input.desperdicio_porcentaje,
+    cuadrilla: input.cuadrilla ?? null,
     grupo: input.grupo,
     orden,
     parcial: 0,
     partida_id: input.partida_id,
+    porcentaje_aplicado:
+      tipoCalculo === "herramientas_porcentaje_mano_obra"
+        ? input.porcentaje_aplicado ?? 3
+        : input.porcentaje_aplicado ?? null,
     recurso_id: input.recurso_id,
-    rendimiento_factor: input.rendimiento_factor ?? 1,
+    tipo_calculo_apu: tipoCalculo,
     unidad: resource.unidad
   };
 
   return {
     ...row,
-    parcial: calculateApuResourcePartial(row)
+    parcial: computed.parcial
   };
 }
 
 export const itemsRepository = {
   createPartida,
   createPartidaResource,
+  createPartidaWithResources,
   deactivatePartida,
   deletePartidaResource,
   getPartidaBundle,

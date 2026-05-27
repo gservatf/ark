@@ -14,6 +14,11 @@ import { PresenceBar } from "@/components/shared/PresenceBar";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import { ConfirmDeactivateDialog } from "@/components/recursos/ConfirmDeactivateDialog";
 import {
+  createUnidadMedida,
+  listPartidaCatalogs,
+  updateUnidadMedida
+} from "@/lib/data/partida-catalogs";
+import {
   ResourceFilters,
   type ResourceFiltersValue
 } from "@/components/recursos/ResourceFilters";
@@ -62,7 +67,7 @@ import {
   type RecursoProveedorPrecioInput
 } from "@/lib/validations/quotes";
 import { recursoInputSchema, type RecursoInput } from "@/lib/validations/resources";
-import type { Proveedor, Recurso, RecursoPrecioHistorial, RecursoProveedorPrecio } from "@/types/domain";
+import type { Proveedor, Recurso, RecursoPrecioHistorial, RecursoProveedorPrecio, UnidadMedida } from "@/types/domain";
 
 type WorkspaceState = {
   canMutate: boolean;
@@ -83,7 +88,8 @@ const emptyForm: ResourceFormState = {
   proveedor_id: "",
   tipo: "material",
   transporte_aplica: false,
-  unidad: ""
+  unidad: "",
+  unidad_id: ""
 };
 
 const emptyQuoteForm: ResourceQuoteFormState = {
@@ -107,6 +113,7 @@ export default function RecursosPage() {
   const searchParams = useSearchParams();
   const [resources, setResources] = useState<Recurso[]>([]);
   const [providers, setProviders] = useState<Proveedor[]>([]);
+  const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [history, setHistory] = useState<RecursoPrecioHistorial[]>([]);
   const [quotes, setQuotes] = useState<RecursoProveedorPrecio[]>([]);
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
@@ -209,9 +216,10 @@ export default function RecursosPage() {
       canMutate: canManageOrganizationCatalog(workspaceResult.data)
     };
 
-    const [resourcesResult, providersResult] = await Promise.all([
+    const [resourcesResult, providersResult, catalogResult] = await Promise.all([
       listResources(supabase, nextWorkspace.scope),
-      listProviders(supabase, nextWorkspace.scope)
+      listProviders(supabase, nextWorkspace.scope),
+      listPartidaCatalogs(supabase, nextWorkspace.scope)
     ]);
 
     if (!resourcesResult.ok) {
@@ -226,6 +234,12 @@ export default function RecursosPage() {
       return;
     }
 
+    if (!catalogResult.ok) {
+      setLoadError(errorMessage(catalogResult.error));
+      setIsLoading(false);
+      return;
+    }
+
     const currentSelectedId = selectedResourceIdRef.current;
     const nextSelectedId = currentSelectedId && resourcesResult.data.some((resource) => resource.id === currentSelectedId)
       ? currentSelectedId
@@ -234,6 +248,7 @@ export default function RecursosPage() {
     setWorkspace(nextWorkspace);
     setResources(resourcesResult.data);
     setProviders(providersResult.data);
+    setUnidades(catalogResult.data.unidades);
     setSelectedResourceId(nextSelectedId);
     setIsLoading(false);
     await Promise.all([
@@ -291,7 +306,8 @@ export default function RecursosPage() {
     [workspace]
   );
   const activityFilter = useCallback(
-    (payload: ActivityRealtimePayload) => ["recurso", "proveedor", "recurso_proveedor_precio"].includes(payload.entityType),
+    (payload: ActivityRealtimePayload) =>
+      ["recurso", "proveedor", "recurso_proveedor_precio", "unidad_medida"].includes(payload.entityType),
     []
   );
   const removeResourceFromState = useCallback((resourceId: string) => {
@@ -552,6 +568,64 @@ export default function RecursosPage() {
     }));
     setFormErrors((current) => ({ ...current, [field]: undefined }));
     setMutationError(null);
+  }
+
+  function handleFormPatch(values: Partial<ResourceFormState>) {
+    setForm((current) => ({ ...current, ...values }));
+    setFormErrors((current) => {
+      const nextErrors = { ...current };
+
+      Object.keys(values).forEach((key) => {
+        nextErrors[key as keyof ResourceFormState] = undefined;
+      });
+
+      return nextErrors;
+    });
+    setMutationError(null);
+  }
+
+  async function handleCreateUnidad(codigo: string): Promise<UnidadMedida | null> {
+    if (!workspace) {
+      setMutationError("No se encontro una organizacion activa para crear la unidad.");
+      return null;
+    }
+
+    const trimmedCode = codigo.trim();
+    const result = await createUnidadMedida(createBrowserClient(), workspace.scope, {
+      codigo: trimmedCode,
+      nombre: trimmedCode
+    });
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return null;
+    }
+
+    setUnidades((current) => [...current, result.data].sort((a, b) => a.codigo.localeCompare(b.codigo)));
+    setMutationError(null);
+    return result.data;
+  }
+
+  async function handleUpdateUnidad(unidadId: string, values: { codigo: string; nombre: string }): Promise<UnidadMedida | null> {
+    if (!workspace) {
+      setMutationError("No se encontro una organizacion activa para editar la unidad.");
+      return null;
+    }
+
+    const result = await updateUnidadMedida(createBrowserClient(), workspace.scope, unidadId, values);
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return null;
+    }
+
+    setUnidades((current) =>
+      current
+        .map((unidad) => (unidad.id === result.data.id ? result.data : unidad))
+        .sort((a, b) => a.codigo.localeCompare(b.codigo))
+    );
+    setMutationError(null);
+    return result.data;
   }
 
   function handleQuoteFormChange<Field extends keyof ResourceQuoteFormState>(
@@ -1007,8 +1081,12 @@ export default function RecursosPage() {
                       setMutationError(null);
                     }}
                     onChange={handleFormChange}
+                    onCreateUnidad={handleCreateUnidad}
+                    onPatch={handleFormPatch}
                     onSubmit={handleSubmit}
+                    onUpdateUnidad={handleUpdateUnidad}
                     providers={providers}
+                    unidades={unidades}
                   />
                 ) : null}
               </div>
@@ -1075,7 +1153,8 @@ function formFromResource(resource: Recurso): ResourceFormState {
     proveedor_id: resource.proveedor_id || "",
     tipo: resource.tipo,
     transporte_aplica: resource.transporte_aplica,
-    unidad: resource.unidad
+    unidad: resource.unidad,
+    unidad_id: resource.unidad_id || ""
   };
 }
 

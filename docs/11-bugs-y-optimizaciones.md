@@ -55,14 +55,14 @@ Actualizar este resumen cada vez que cambie el estado de un ítem.
 
 Bloquean el deploy a producción. Deben resolverse antes de subir a GitHub/Vercel/Supabase remoto.
 
-### COR-01: Fórmula APU incluye `rendimiento_factor` en el costo parcial
+### COR-01: Formula APU anterior aplicaba productividad dentro del parcial
 
 - **Estado**: [x] Resuelto
 - **Archivo**: `lib/calculations/apu.ts:54-58`
-- **Descripción**: La fórmula actual hace `parcial = (cantidad × costo + transporte + desperdicio) × rendimiento_factor`. Esto distorsiona el APU porque la cantidad del recurso ya debe representar el consumo unitario por partida. Ejemplo: si mano de obra se modela como `0.50 HH/m2`, el parcial correcto es `0.50 × costo_HH`; aplicar rendimiento otra vez duplica la productividad dentro del costo.
+- **Descripcion**: El modelo APU anterior mezclaba productividad dentro del parcial financiero del recurso. Esto distorsionaba el costo porque la productividad debe convertirse primero en cantidad y luego multiplicarse por el costo unitario.
 - **Decisión validada**: el rendimiento no debe multiplicar ni dividir el parcial financiero del APU. El rendimiento puede usarse para planificación, duración, productividad o sugerencias de cronograma, pero no para recalcular el costo parcial si la cantidad ya está expresada como coeficiente unitario.
-- **Solución propuesta**: quitar `rendimiento_factor` de `calculateApuResourcePartial` y ajustar tests/documentación. Mantener el campo solo como dato informativo o de planificación mientras no exista una conversión explícita de rendimiento a cantidad. Actualizar `docs/03-calculos.md` y validar impactos en presupuesto, exportaciones y cronogramas.
-- **Notas**: Resuelto en workspace el 2026-05-20: `calculateApuResourcePartial` valida pero no aplica `rendimiento_factor` al parcial financiero. Verificado con `pnpm run supabase:types`, `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint` y `pnpm build`.
+- **Solucion propuesta**: separar cantidad y parcial financiero, ajustar tests/documentacion y dejar que la productividad se convierta explicitamente antes del calculo monetario.
+- **Notas**: Resuelto en workspace el 2026-05-20 y reemplazado por el redisenio APU del 2026-05-26: la productividad ahora usa `rendimiento`, `jornada_horas` y `cuadrilla` segun el tipo de calculo.
 
 ### COR-02: Doble cálculo de gastos generales y utilidad
 
@@ -241,9 +241,9 @@ Resolver antes de uso con datos reales o múltiples usuarios concurrentes.
 
 - **Estado**: [x] Resuelto
 - **Archivo**: `lib/validations/items.ts:20`
-- **Descripción**: `coercedNonNegativeNumber.optional().nullable()` acepta 0. Un 0 se usa como multiplicador en `rendimiento_factor ?? 1`, generando parciales = 0 silenciosamente.
+- **Descripcion**: `coercedNonNegativeNumber.optional().nullable()` aceptaba 0. Un rendimiento 0 podia generar cantidades o parciales invalidos silenciosamente.
 - **Solución propuesta**: Usar `.positive()` o transformar 0 → null en el preprocess de Zod.
-- **Notas**: Resuelto en workspace el 2026-05-20: `rendimiento` y `rendimiento_factor` usan validación positiva, aceptan vacío/null y rechazan `0`. Verificado con `pnpm run supabase:types`, `pnpm test`, `pnpm exec tsc --noEmit`, `pnpm lint` y `pnpm build`.
+- **Notas**: Resuelto en workspace el 2026-05-20 y actualizado el 2026-05-26: rendimiento vacio usa default `1`; rendimiento `0` o negativo se rechaza.
 
 ### COR-12: Validaciones Zod sin `.max()` en strings
 

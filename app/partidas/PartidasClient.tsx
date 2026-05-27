@@ -12,6 +12,7 @@ import {
 } from "@/components/partidas/PartidaFilters";
 import {
   PartidaFormPanel,
+  type ApuDraftResource,
   type PartidaFormState
 } from "@/components/partidas/PartidaFormPanel";
 import { PartidaMetrics } from "@/components/partidas/PartidaMetrics";
@@ -26,11 +27,21 @@ import { PresenceBar } from "@/components/shared/PresenceBar";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import {
   createPartida,
+  createPartidaWithResources,
   deactivatePartida,
   listOrganizationPartidaResources,
   listPartidas,
   updatePartida
 } from "@/lib/data/items";
+import {
+  createPartidaCategoria,
+  createPartidaSubcategoria,
+  createUnidadMedida,
+  listPartidaCatalogs,
+  updateUnidadMedida,
+  type PartidaCatalogs
+} from "@/lib/data/partida-catalogs";
+import { listResources } from "@/lib/data/resources";
 import type { DataError, DataScope } from "@/lib/data/types";
 import { canManageOrganizationCatalog, resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
@@ -44,7 +55,7 @@ import {
   serializePartidaFilters
 } from "@/lib/ui/url-state";
 import { partidaInputSchema, type PartidaInput } from "@/lib/validations/items";
-import type { Partida, PartidaRecurso } from "@/types/domain";
+import type { Partida, PartidaCategoria, PartidaRecurso, PartidaSubcategoria, Recurso, UnidadMedida } from "@/types/domain";
 
 type WorkspaceState = {
   canMutate: boolean;
@@ -53,14 +64,23 @@ type WorkspaceState = {
 
 const emptyForm: PartidaFormState = {
   categoria: "",
+  categoria_id: "",
   codigo: "",
-  cuadrilla: "",
-  descripcion: "",
+  desperdicio_materiales_porcentaje: "5",
   especificaciones: "",
-  estado: "activo",
+  jornada_horas: "8",
   nombre: "",
   rendimiento: "",
+  subcategoria: "",
+  subcategoria_id: "",
+  unidad_id: "",
   unidad: ""
+};
+
+const emptyCatalogs: PartidaCatalogs = {
+  categorias: [],
+  subcategorias: [],
+  unidades: []
 };
 
 const initialFilters: PartidaFiltersValue = partidaFilterDefaults;
@@ -71,6 +91,8 @@ export default function PartidasPage() {
   const searchParams = useSearchParams();
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [apuResources, setApuResources] = useState<PartidaRecurso[]>([]);
+  const [catalogResources, setCatalogResources] = useState<Recurso[]>([]);
+  const [partidaCatalogs, setPartidaCatalogs] = useState<PartidaCatalogs>(emptyCatalogs);
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
   const [filters, setFilters] = useState<PartidaFiltersValue>(() => parsePartidaFilters(searchParams));
   const [form, setForm] = useState<PartidaFormState>(emptyForm);
@@ -103,9 +125,11 @@ export default function PartidasPage() {
       canMutate: canManageOrganizationCatalog(workspaceResult.data)
     };
 
-    const [partidasResult, resourcesResult] = await Promise.all([
+    const [partidasResult, resourcesResult, catalogResult, partidaCatalogsResult] = await Promise.all([
       listPartidas(supabase, nextWorkspace.scope),
-      listOrganizationPartidaResources(supabase, nextWorkspace.scope)
+      listOrganizationPartidaResources(supabase, nextWorkspace.scope),
+      listResources(supabase, nextWorkspace.scope),
+      listPartidaCatalogs(supabase, nextWorkspace.scope)
     ]);
 
     if (!partidasResult.ok) {
@@ -120,9 +144,23 @@ export default function PartidasPage() {
       return;
     }
 
+    if (!catalogResult.ok) {
+      setLoadError(errorMessage(catalogResult.error));
+      setIsLoading(false);
+      return;
+    }
+
+    if (!partidaCatalogsResult.ok) {
+      setLoadError(errorMessage(partidaCatalogsResult.error));
+      setIsLoading(false);
+      return;
+    }
+
     setWorkspace(nextWorkspace);
     setPartidas(partidasResult.data);
     setApuResources(resourcesResult.data);
+    setCatalogResources(catalogResult.data);
+    setPartidaCatalogs(partidaCatalogsResult.data);
     setIsLoading(false);
   }, []);
 
@@ -155,7 +193,15 @@ export default function PartidasPage() {
     [workspace]
   );
   const activityFilter = useCallback(
-    (payload: ActivityRealtimePayload) => ["partida", "partida_recurso", "recurso"].includes(payload.entityType),
+    (payload: ActivityRealtimePayload) =>
+      [
+        "partida",
+        "partida_categoria",
+        "partida_recurso",
+        "partida_subcategoria",
+        "recurso",
+        "unidad_medida"
+      ].includes(payload.entityType),
     []
   );
   const activity = useActivitySubscription({
@@ -180,9 +226,14 @@ export default function PartidasPage() {
   const categories = useMemo(
     () =>
       Array.from(
-        new Set(partidas.map((partida) => partida.categoria).filter(Boolean) as string[])
+        new Set(
+          [
+            ...partidaCatalogs.categorias.map((categoria) => categoria.nombre),
+            ...partidas.map((partida) => partida.categoria).filter(Boolean)
+          ] as string[]
+        )
       ).sort((a, b) => a.localeCompare(b)),
-    [partidas]
+    [partidaCatalogs.categorias, partidas]
   );
 
   const filteredPartidas = useMemo(() => {
@@ -236,7 +287,114 @@ export default function PartidasPage() {
     setMutationError(null);
   }
 
-  async function handleSubmit() {
+  function handleFormPatch(values: Partial<PartidaFormState>) {
+    setForm((current) => ({ ...current, ...values }));
+    setFormErrors((current) => {
+      const nextErrors = { ...current };
+
+      Object.keys(values).forEach((key) => {
+        nextErrors[key as keyof PartidaFormState] = undefined;
+      });
+
+      return nextErrors;
+    });
+    setMutationError(null);
+  }
+
+  async function handleCreateCategoria(nombre: string): Promise<PartidaCategoria | null> {
+    if (!workspace) {
+      setMutationError("No se encontro una organizacion activa para crear la categoria.");
+      return null;
+    }
+
+    const result = await createPartidaCategoria(createBrowserClient(), workspace.scope, { nombre });
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return null;
+    }
+
+    setPartidaCatalogs((current) => ({
+      ...current,
+      categorias: [...current.categorias, result.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+    }));
+    setMutationError(null);
+    return result.data;
+  }
+
+  async function handleCreateSubcategoria(categoriaId: string, nombre: string): Promise<PartidaSubcategoria | null> {
+    if (!workspace) {
+      setMutationError("No se encontro una organizacion activa para crear la subcategoria.");
+      return null;
+    }
+
+    const result = await createPartidaSubcategoria(createBrowserClient(), workspace.scope, {
+      categoria_id: categoriaId,
+      nombre
+    });
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return null;
+    }
+
+    setPartidaCatalogs((current) => ({
+      ...current,
+      subcategorias: [...current.subcategorias, result.data].sort((a, b) => a.nombre.localeCompare(b.nombre))
+    }));
+    setMutationError(null);
+    return result.data;
+  }
+
+  async function handleCreateUnidad(codigo: string): Promise<UnidadMedida | null> {
+    if (!workspace) {
+      setMutationError("No se encontro una organizacion activa para crear la unidad.");
+      return null;
+    }
+
+    const trimmedCode = codigo.trim();
+    const result = await createUnidadMedida(createBrowserClient(), workspace.scope, {
+      codigo: trimmedCode,
+      nombre: trimmedCode
+    });
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return null;
+    }
+
+    setPartidaCatalogs((current) => ({
+      ...current,
+      unidades: [...current.unidades, result.data].sort((a, b) => a.codigo.localeCompare(b.codigo))
+    }));
+    setMutationError(null);
+    return result.data;
+  }
+
+  async function handleUpdateUnidad(unidadId: string, values: { codigo: string; nombre: string }): Promise<UnidadMedida | null> {
+    if (!workspace) {
+      setMutationError("No se encontro una organizacion activa para editar la unidad.");
+      return null;
+    }
+
+    const result = await updateUnidadMedida(createBrowserClient(), workspace.scope, unidadId, values);
+
+    if (!result.ok) {
+      setMutationError(errorMessage(result.error));
+      return null;
+    }
+
+    setPartidaCatalogs((current) => ({
+      ...current,
+      unidades: current.unidades
+        .map((unidad) => (unidad.id === result.data.id ? result.data : unidad))
+        .sort((a, b) => a.codigo.localeCompare(b.codigo))
+    }));
+    setMutationError(null);
+    return result.data;
+  }
+
+  async function handleSubmit(resources: ApuDraftResource[] = [], createAnother = false) {
     if (!workspace) {
       setMutationError("No se encontró una organización activa para guardar la partida.");
       return;
@@ -265,7 +423,21 @@ export default function PartidasPage() {
           base: basePartida,
           expectedUpdatedAt: basePartida?.updated_at
         })
-      : await createPartida(createBrowserClient(), workspace.scope, formData);
+      : resources.length > 0
+        ? await createPartidaWithResources(createBrowserClient(), workspace.scope, {
+            partida: formData,
+            resources: resources.map((resource, index) => ({
+              cantidad_base: numberOrNull(resource.cantidad_base),
+              cuadrilla: numberOrNull(resource.cuadrilla),
+              grupo: resource.grupo,
+              orden: index + 1,
+              partida_id: "",
+              porcentaje_aplicado: numberOrNull(resource.porcentaje_aplicado),
+              recurso_id: resource.recurso_id,
+              tipo_calculo_apu: resource.tipo_calculo_apu
+            }))
+          })
+        : await createPartida(createBrowserClient(), workspace.scope, formData);
 
     setIsSaving(false);
 
@@ -280,13 +452,22 @@ export default function PartidasPage() {
       return;
     }
 
+    const savedPartida = "partida" in result.data ? result.data.partida : result.data;
+    const savedResources = "resources" in result.data ? result.data.resources : [];
+
     setPartidas((current) =>
       editingId
-        ? current.map((partida) => (partida.id === result.data.id ? result.data : partida))
-        : [result.data, ...current]
+        ? current.map((partida) => (partida.id === savedPartida.id ? savedPartida : partida))
+        : [savedPartida, ...current]
     );
-    setShowForm(false);
+    if (savedResources.length > 0) {
+      setApuResources((current) => [...current, ...savedResources]);
+    }
+    setShowForm(createAnother);
     setEditingId(null);
+    if (createAnother) {
+      setForm(emptyForm);
+    }
     setFormErrors({});
   }
 
@@ -489,10 +670,15 @@ export default function PartidasPage() {
 
             {showForm ? (
               <PartidaFormPanel
+                catalogs={partidaCatalogs}
                 errors={formErrors}
                 form={form}
                 isEditing={Boolean(editingId)}
                 isSubmitting={isSaving}
+                onCreateCategoria={handleCreateCategoria}
+                onCreateSubcategoria={handleCreateSubcategoria}
+                onCreateUnidad={handleCreateUnidad}
+                onUpdateUnidad={handleUpdateUnidad}
                 onCancel={() => {
                   setShowForm(false);
                   setEditingId(null);
@@ -500,7 +686,9 @@ export default function PartidasPage() {
                   setMutationError(null);
                 }}
                 onChange={handleFormChange}
+                onPatch={handleFormPatch}
                 onSubmit={handleSubmit}
+                resourceCatalog={catalogResources}
               />
             ) : null}
           </>
@@ -519,13 +707,16 @@ export default function PartidasPage() {
 function formFromPartida(partida: Partida): PartidaFormState {
   return {
     categoria: partida.categoria || "",
-    codigo: partida.codigo,
-    cuadrilla: partida.cuadrilla || "",
-    descripcion: partida.descripcion || "",
+    categoria_id: partida.categoria_id || "",
+    codigo: partida.codigo || "",
+    desperdicio_materiales_porcentaje: String(partida.desperdicio_materiales_porcentaje ?? 5),
     especificaciones: partida.especificaciones || "",
-    estado: partida.estado,
+    jornada_horas: String(partida.jornada_horas ?? 8),
     nombre: partida.nombre,
     rendimiento: partida.rendimiento === null || partida.rendimiento === undefined ? "" : String(partida.rendimiento),
+    subcategoria: partida.subcategoria || "",
+    subcategoria_id: partida.subcategoria_id || "",
+    unidad_id: partida.unidad_id || "",
     unidad: partida.unidad
   };
 }
@@ -550,7 +741,8 @@ function validateForm(form: PartidaFormState): {
 } {
   const parsed = partidaInputSchema.safeParse({
     ...form,
-    rendimiento: form.rendimiento.trim() ? form.rendimiento : null
+    estado: "activo",
+    rendimiento: form.rendimiento.trim() ? form.rendimiento : undefined
   });
 
   if (parsed.success) {
@@ -579,4 +771,8 @@ function errorMessage(error: DataError) {
   }
 
   return error.message;
+}
+
+function numberOrNull(value: string) {
+  return value.trim() ? Number(value) : null;
 }

@@ -19,6 +19,7 @@ El modelo de datos estÃ¡ documentado y preparado en SQL. La UI ya lo usa como 
 - El hardening de producciÃ³n web/Auth vive en `supabase/migrations/20260520164133_chunk3_auth_web_security_hardening.sql`: ajusta `set_updated_at`, reemplaza grants globales por grants explÃ­citos y limita payloads de auditorÃ­a.
 - La creaciÃ³n de proyectos post-onboarding vive en `supabase/migrations/20260522165506_create_project_activity_center.sql`: agrega `create_project_with_current_member`, registra auditorÃ­a `proyecto` y habilita el centro de actividad persistente.
 - El onboarding personal vive en `supabase/migrations/20260525090532_onboarding_profile_workspace.sql`: agrega `complete_user_onboarding(nombre_usuario, apellido_usuario)` para guardar el nombre visible del usuario y crear una organizaciÃ³n vacÃ­a sin proyecto inicial.
+- Los catalogos de cabecera de partidas viven en `supabase/migrations/20260527150942_partida_catalogs.sql`: agrega `partida_categorias`, `partida_subcategorias`, `unidades_medida` y llaves opcionales desde `partidas`.
 
 - Multi-organizacion 2026-05-25: `supabase/migrations/20260525100520_multi_organization_invitations.sql` agrega `tipo_organizacion`, `organizacion_invitaciones`, `create_organization_for_current_user`, `create_project_in_organization`, `list_workspace_organizations`, `list_budget_dashboard_projects(p_organizacion_id)` e invitaciones a organizacion con seleccion multiple de proyectos. `20260525163547_organization_member_permissions.sql` agrega RPCs para listar y actualizar permisos de miembros por organizacion/proyecto.
 
@@ -38,7 +39,8 @@ Reglas actuales:
 - Proveedores se listan, obtienen, crean, actualizan y desactivan con `organizacion_id = scope.organizacionId`.
 - Recursos se listan, obtienen, crean, actualizan y desactivan con `estado = 'inactivo'`.
 - Cotizaciones por recurso/proveedor se gestionan en `lib/data/quotes.ts` con scope de organizaciÃ³n, validaciÃ³n Zod, preferido interno Ãºnico por recurso y auditorÃ­a.
-- Partidas/APU se gestionan en `lib/data/items.ts`: lista, crea, edita y desactiva partidas, persiste recursos APU, recalcula parciales y registra auditoria.
+- Partidas/APU se gestionan en `lib/data/items.ts`: lista, crea, edita y desactiva partidas, persiste recursos APU con reglas por tipo de calculo, recalcula parciales y registra auditoria.
+- Los catalogos de partida se gestionan en `lib/data/partida-catalogs.ts`: lista categorias, subcategorias y unidades por organizacion; crea nuevas opciones desde el modal y registra auditoria.
 - Presupuestos se gestionan en `lib/data/budgets.ts`: lista dashboard persistente, asegura/crea borrador activo por proyecto, edita datos generales, agrega partidas por RPC, edita metrados, elimina lÃ­neas, refresca precios vigentes, fija precios por lÃ­nea/recurso, resuelve o selecciona precios cliente, aplica override manual y emite versiones oficiales congeladas por RPC.
 - Proyectos se gestionan en `lib/data/projects.ts`: lista proyectos accesibles del workspace y crea proyectos mediante la RPC transaccional `create_project_with_current_member`.
 - El flujo nuevo de proyectos usa `create_project_in_organization(p_organizacion_id, nombre_proyecto, cliente, ubicacion)` para respetar la organizacion activa recordada por navegador.
@@ -58,6 +60,9 @@ Reglas actuales:
 - `recurso_proveedor_precios`
 - `recurso_precios_historial`
 - `partidas`
+- `partida_categorias`
+- `partida_subcategorias`
+- `unidades_medida`
 - `partida_recursos`
 - `presupuestos` legacy temporal
 - `presupuesto_partidas`
@@ -210,6 +215,7 @@ Campos:
 - `nombre`
 - `tipo`: `material | mano_obra | equipo | herramienta`
 - `unidad`
+- `unidad_id`: FK opcional a `unidades_medida`; `unidad` se conserva como snapshot legible.
 - `costo_unitario_actual`
 - `proveedor_id`
 - `transporte_aplica`
@@ -248,7 +254,7 @@ Campos conceptuales:
 - `created_at`
 - `updated_at`
 
-En el CRUD persistente, `codigo` es unico por organizacion. Las partidas se desactivan con `estado = inactivo`; no se eliminan fisicamente desde la UI.
+En el CRUD persistente, `codigo` es opcional. Si existe, es unico por organizacion. Las partidas se desactivan con `estado = inactivo`; no se eliminan fisicamente desde la UI.
 
 Reglas:
 
@@ -279,37 +285,65 @@ Campos:
 
 ## Partidas/APU
 
-`partidas` contiene la cabecera tÃ©cnica:
+`partidas` contiene solo la cabecera tecnica del concepto constructivo:
 
 - `id`
-- `codigo`
+- `codigo`: opcional; unico por organizacion cuando existe.
 - `nombre`
 - `unidad`
+- `unidad_id`: FK opcional a `unidades_medida`.
 - `categoria`
-- `descripcion`
+- `categoria_id`: FK opcional a `partida_categorias`.
+- `subcategoria`
+- `subcategoria_id`: FK opcional a `partida_subcategorias`.
 - `especificaciones`
-- `rendimiento`
-- `cuadrilla`
+- `rendimiento`: opcional en UI; se persiste como `1` si queda vacio.
+- `jornada_horas`: default `8`.
+- `desperdicio_materiales_porcentaje`: default `5`.
 - `estado`
 - `created_at`
 - `updated_at`
 
-`partida_recursos` contiene los recursos asociados:
+`partida_categorias`, `partida_subcategorias` y `unidades_medida` son catalogos por organizacion. La UI nueva usa dropdowns persistentes, pero `partidas` conserva los textos `categoria`, `subcategoria` y `unidad` como snapshot legible para listados, exportaciones y compatibilidad.
+
+Campos principales:
+
+- `organizacion_id`
+- `nombre` para categorias y subcategorias.
+- `categoria_id` en subcategorias.
+- `codigo`, `nombre` y `tipo` opcional en unidades.
+- `estado`
+- `created_at`
+- `updated_at`
+
+Los nombres/codigos activos son unicos dentro de la organizacion. Los miembros con permiso para gestionar el catalogo operativo pueden crear opciones; los miembros de la organizacion pueden leerlas.
+
+`partida_recursos` contiene las lineas APU asociadas a la partida. La cuadrilla ya no vive en la cabecera: pertenece a mano de obra y equipos `HM`.
 
 - `id`
 - `partida_id`
 - `recurso_id`
 - `grupo`: `materiales | mano_obra | equipos_herramientas`
+- `tipo_calculo_apu`: `mano_obra_rendimiento | material_desperdicio | equipo_hm_rendimiento | equipo_cantidad_fija | herramientas_porcentaje_mano_obra`
+- `cuadrilla`: aplica a mano de obra y equipos `HM`.
+- `cantidad_base`: aplica a materiales y equipos de cantidad fija.
+- `porcentaje_aplicado`: aplica a herramientas manuales, default `3`.
 - `cantidad`
 - `unidad`
 - `costo_unitario_snapshot`
 - `costo_transporte_snapshot`
-- `rendimiento_factor`
-- `desperdicio_porcentaje`
 - `parcial`
 - `orden`
 
-Cada fila APU guarda snapshot de unidad y costos del recurso en el momento de agregarlo o editarlo. El campo `parcial` se recalcula desde `lib/calculations/apu.ts` antes de persistir para que el builder, presupuestos y futuros recalculos colaborativos usen la misma formula.
+Cada fila APU guarda snapshot de unidad y costos del recurso en el momento de agregarlo o editarlo. El campo `cantidad` representa la cantidad final usada para el parcial y `parcial` queda congelado por linea. Los calculos viven en `lib/calculations/apu.ts`.
+
+Reglas vigentes:
+
+- Mano de obra: `cantidad = cuadrilla * jornada_horas / rendimiento`.
+- Materiales: `cantidad = cantidad_base * (1 + desperdicio_materiales_porcentaje / 100)`.
+- Equipos con unidad `HM`: `cantidad = cuadrilla * jornada_horas / rendimiento`.
+- Equipos con otra unidad: `cantidad = cantidad_base`.
+- Herramientas manuales: `parcial = subtotal_mano_obra * porcentaje_aplicado / 100`.
 
 Las partidas no guardan gastos generales ni utilidad propios. Esos porcentajes pertenecen al presupuesto completo y se aplican sobre el subtotal de todas las partidas. En el detalle APU pueden mostrarse controles editables de simulacion, pero no son fuente persistente del precio oficial de una partida.
 
@@ -345,10 +379,11 @@ Las partidas no guardan gastos generales ni utilidad propios. Esos porcentajes p
 - `nombre_snapshot`
 - `unidad_snapshot`
 - `categoria_snapshot`
-- `descripcion_snapshot`
+- `subcategoria_snapshot`
 - `especificaciones_snapshot`
 - `rendimiento_snapshot`
-- `cuadrilla_snapshot`
+- `jornada_horas_snapshot`
+- `desperdicio_materiales_porcentaje_snapshot`
 - `metrado`
 - `precio_unitario_snapshot`
 - `parcial`
@@ -379,10 +414,12 @@ Campos snapshot principales:
 - `precio_cliente_origen_snapshot`: proveedor visible, fallback general u override manual.
 - `precio_cliente_advertencia_snapshot`: nota cuando faltÃ³ referencia de proveedor visible para cliente.
 - `grupo`
+- `tipo_calculo_apu`
+- `cuadrilla`
+- `cantidad_base`
+- `porcentaje_aplicado`
 - `cantidad`
 - `unidad`
-- `rendimiento_factor`
-- `desperdicio_porcentaje`
 - `parcial_snapshot`
 - `orden`
 

@@ -2,8 +2,7 @@ import { Boxes, Calculator, FileSpreadsheet, TrendingUp } from "lucide-react";
 import { StatCard } from "@/components/shared/StatCard";
 import { formatCurrency } from "@/components/partidas/partida-ui";
 import {
-  calculateApuDirectCost,
-  calculateApuUnitPrice
+  calculateApuDirectCost
 } from "@/lib/calculations/apu";
 import type { Partida, PartidaRecurso } from "@/types/domain";
 
@@ -19,14 +18,9 @@ export function PartidaMetrics({ partidas, resources }: PartidaMetricsProps) {
     partidas.length > 0
       ? partidas.reduce((total, partida) => {
           const apuResources = resources.filter((resource) => resource.partida_id === partida.id);
-          const directCost = calculateApuDirectCost(apuResources);
-          const unitPrice = calculateApuUnitPrice({
-            costo_directo: directCost.costo_directo,
-            gastos_generales_porcentaje: 10,
-            utilidad_porcentaje: 10
-          });
+          const directCost = calculateApuDirectCost(apuResources, partida);
 
-          return total + unitPrice.precio_unitario;
+          return total + directCost.costo_directo;
         }, 0) / partidas.length
       : 0;
 
@@ -56,7 +50,7 @@ export function PartidaMetrics({ partidas, resources }: PartidaMetricsProps) {
       <StatCard
         icon={Calculator}
         label="Precio unitario prom."
-        link="GG 10% + utilidad 10%"
+        link="Costo directo APU"
         tone="violet"
         value={formatCurrency(averageUnitPrice)}
       />

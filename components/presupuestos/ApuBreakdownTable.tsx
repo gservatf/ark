@@ -64,7 +64,8 @@ export function ApuBreakdownTable({ line, resources }: ApuBreakdownTableProps) {
             label="Rendimiento"
             value={line.rendimiento_snapshot ? `${formatNumber(line.rendimiento_snapshot)} ${line.unidad_snapshot} / jor` : "Sin dato"}
           />
-          <CalcRow label="Cuadrilla" value={line.cuadrilla_snapshot || "Sin cuadrilla"} />
+          <CalcRow label="Jornada" value={`${formatNumber(line.jornada_horas_snapshot ?? 8)} hr/dia`} />
+          <CalcRow label="Desperdicio materiales" value={`${formatNumber(line.desperdicio_materiales_porcentaje_snapshot ?? 5)}%`} />
           <div className="my-3 border-t border-slate-200" />
           <CalcRow label="Costo directo" value={formatCurrency(directTotals.costo_directo)} />
           <CalcRow label="Precio congelado" value={formatCurrency(line.precio_unitario_snapshot)} />

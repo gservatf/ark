@@ -4,8 +4,7 @@ import type {
   PresupuestoPartidaRecursoSnapshot
 } from "@/types/domain";
 import {
-  calculateApuDirectCost,
-  calculateApuResourcePartial
+  calculateApuDirectCost
 } from "@/lib/calculations/apu";
 import { calculateBudgetLinePartial, calculateBudgetTotals } from "@/lib/calculations/budget";
 import { mockPartidaResources, mockPartidas } from "@/lib/mock-data/partidas";
@@ -209,19 +208,20 @@ export function createBudgetLine({
   }
 
   const resources = mockPartidaResources.filter((resource) => resource.partida_id === partida.id);
-  const directTotals = calculateApuDirectCost(resources);
+  const directTotals = calculateApuDirectCost(resources, partida);
   const line = {
     id,
     presupuesto_id: presupuestoId,
     partida_id: partida.id,
-    codigo_snapshot: partida.codigo,
+    codigo_snapshot: partida.codigo || "",
     nombre_snapshot: partida.nombre,
     unidad_snapshot: partida.unidad,
     categoria_snapshot: partida.categoria,
-    descripcion_snapshot: partida.descripcion,
+    subcategoria_snapshot: partida.subcategoria,
     especificaciones_snapshot: partida.especificaciones,
     rendimiento_snapshot: partida.rendimiento,
-    cuadrilla_snapshot: partida.cuadrilla,
+    jornada_horas_snapshot: partida.jornada_horas,
+    desperdicio_materiales_porcentaje_snapshot: partida.desperdicio_materiales_porcentaje,
     precio_unitario_snapshot: directTotals.costo_directo,
     metrado,
     parcial: 0,
@@ -265,11 +265,13 @@ export function createBudgetLineResourceSnapshots(
         fuente_precio_snapshot: resource.fuente_precio,
         fecha_precio_snapshot: resource.fecha_actualizacion_precio,
         grupo: partidaResource.grupo,
+        cantidad_base: partidaResource.cantidad_base,
         cantidad: partidaResource.cantidad,
+        cuadrilla: partidaResource.cuadrilla,
         unidad: partidaResource.unidad,
-        rendimiento_factor: partidaResource.rendimiento_factor,
-        desperdicio_porcentaje: partidaResource.desperdicio_porcentaje,
-        parcial_snapshot: calculateApuResourcePartial(partidaResource),
+        porcentaje_aplicado: partidaResource.porcentaje_aplicado,
+        tipo_calculo_apu: partidaResource.tipo_calculo_apu,
+        parcial_snapshot: partidaResource.parcial,
         orden: partidaResource.orden
       };
     });

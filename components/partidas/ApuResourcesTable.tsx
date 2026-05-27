@@ -48,10 +48,10 @@ export function ApuResourcesTable({
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-bold uppercase text-slate-500">
               <th scope="col" className="px-5 py-3">Recurso</th>
               <th scope="col" className="px-5 py-3 text-center">Und.</th>
+              <th scope="col" className="px-5 py-3 text-right">Base/Cuadrilla</th>
               <th scope="col" className="px-5 py-3 text-right">Cantidad</th>
               <th scope="col" className="px-5 py-3 text-right">Costo unit.</th>
               <th scope="col" className="px-5 py-3 text-right">Transporte</th>
-              <th scope="col" className="px-5 py-3 text-right">Desperdicio</th>
               <th scope="col" className="px-5 py-3 text-right">Parcial</th>
               <th scope="col" className="w-28 px-5 py-3 text-right">Acciones</th>
             </tr>
@@ -112,6 +112,11 @@ function ResourceGroup({
       {resources.map((resource) => {
         const catalogResource = resourceMap.get(resource.recurso_id);
         const partial = calculateApuResourcePartial(resource);
+        const baseValue = resource.tipo_calculo_apu === "herramientas_porcentaje_mano_obra"
+          ? `${formatNumber(resource.porcentaje_aplicado ?? 3)}%`
+          : resource.cuadrilla !== null && resource.cuadrilla !== undefined
+            ? formatNumber(resource.cuadrilla, 3)
+            : formatNumber(resource.cantidad_base ?? resource.cantidad, 3);
 
         return (
           <tr className="border-b border-slate-100 last:border-b-0" key={resource.id}>
@@ -125,6 +130,9 @@ function ResourceGroup({
             </td>
             <td className="px-5 py-3 text-center font-semibold text-slate-600">{resource.unidad}</td>
             <td className="px-5 py-3 text-right text-slate-700">
+              {baseValue}
+            </td>
+            <td className="px-5 py-3 text-right text-slate-700">
               {formatNumber(resource.cantidad, 3)}
             </td>
             <td className="px-5 py-3 text-right text-slate-700">
@@ -132,9 +140,6 @@ function ResourceGroup({
             </td>
             <td className="px-5 py-3 text-right text-slate-700">
               {formatCurrency(resource.costo_transporte_snapshot)}
-            </td>
-            <td className="px-5 py-3 text-right text-slate-700">
-              {formatNumber(resource.desperdicio_porcentaje)}%
             </td>
             <td className="px-5 py-3 text-right font-bold text-slate-900">
               {formatCurrency(partial)}

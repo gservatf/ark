@@ -8,8 +8,7 @@ import {
   partidaStatusLabels
 } from "@/components/partidas/partida-ui";
 import {
-  calculateApuDirectCost,
-  calculateApuUnitPrice
+  calculateApuDirectCost
 } from "@/lib/calculations/apu";
 import { cn } from "@/lib/utils";
 import type { Partida, PartidaRecurso } from "@/types/domain";
@@ -42,19 +41,14 @@ export function PartidaTable({
     return new Map(
       partidas.map((partida) => {
         const apuResources = resourcesByPartidaId.get(partida.id) || [];
-        const totals = calculateApuDirectCost(apuResources);
-        const unitPrice = calculateApuUnitPrice({
-          costo_directo: totals.costo_directo,
-          gastos_generales_porcentaje: 10,
-          utilidad_porcentaje: 10
-        });
+        const totals = calculateApuDirectCost(apuResources, partida);
 
         return [
           partida.id,
           {
             directCost: totals.costo_directo,
             resourceCount: apuResources.length,
-            unitPrice: unitPrice.precio_unitario
+            unitPrice: totals.costo_directo
           }
         ];
       })
@@ -98,10 +92,10 @@ export function PartidaTable({
                 <tr className="border-b border-slate-100 transition hover:bg-blue-50/50" key={partida.id}>
                   <td className="px-5 py-4">
                     <div className="max-w-[340px]">
-                      <p className="font-bold text-slate-900">{partida.codigo}</p>
+                      <p className="font-bold text-slate-900">{partida.codigo || "Sin codigo"}</p>
                       <p className="mt-1 truncate font-medium text-slate-700">{partida.nombre}</p>
                       <p className="mt-1 truncate text-xs text-slate-500">
-                        {partida.descripcion || "Sin descripcion"}
+                        {partida.subcategoria || partida.especificaciones || "Sin especificaciones"}
                       </p>
                     </div>
                   </td>

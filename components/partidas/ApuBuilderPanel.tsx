@@ -1,18 +1,17 @@
 import { CheckCircle2, Plus, X } from "lucide-react";
+
+import { grupoApuLabels } from "@/components/partidas/partida-ui";
 import { Button } from "@/components/shared/Button";
-import {
-  grupoApuLabels
-} from "@/components/partidas/partida-ui";
-import type { GrupoApu, Recurso } from "@/types/domain";
+import { inferApuCalculationTypeFromResource } from "@/lib/calculations/apu";
+import type { GrupoApu, Recurso, TipoCalculoApu } from "@/types/domain";
 
 export type ApuBuilderFormState = {
-  cantidad: string;
-  desperdicio_porcentaje: string;
-  gastos_generales_porcentaje: string;
+  cantidad_base: string;
+  cuadrilla: string;
   grupo: GrupoApu;
+  porcentaje_aplicado: string;
   recurso_id: string;
-  rendimiento_factor: string;
-  utilidad_porcentaje: string;
+  tipo_calculo_apu: TipoCalculoApu;
 };
 
 type ApuBuilderPanelProps = {
@@ -30,7 +29,7 @@ type ApuBuilderPanelProps = {
   onSubmit: () => void;
 };
 
-const groups: GrupoApu[] = ["materiales", "mano_obra", "equipos_herramientas"];
+const groups: GrupoApu[] = ["mano_obra", "materiales", "equipos_herramientas"];
 
 export function ApuBuilderPanel({
   canMutate,
@@ -50,27 +49,13 @@ export function ApuBuilderPanel({
           {isEditing ? "Editar recurso APU" : "Agregar recurso"}
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Los costos se toman como snapshot desde el catálogo de recursos.
+          La cantidad y el parcial se calculan segun la regla del grupo.
         </p>
       </div>
 
       <div className="grid gap-4 p-5 md:grid-cols-2 2xl:grid-cols-1">
         <SelectField
           disabled={isEditing}
-          error={errors.recurso_id}
-          label="Recurso"
-          onChange={(value) => onChange("recurso_id", value)}
-          value={form.recurso_id}
-        >
-          <option value="">Seleccionar recurso</option>
-          {resources.map((resource) => (
-            <option key={resource.id} value={resource.id}>
-              {resource.nombre}
-            </option>
-          ))}
-        </SelectField>
-
-        <SelectField
           label="Grupo APU"
           onChange={(value) => onChange("grupo", value as GrupoApu)}
           value={form.grupo}
@@ -82,46 +67,61 @@ export function ApuBuilderPanel({
           ))}
         </SelectField>
 
-        <TextField
-          error={errors.cantidad}
-          label="Cantidad"
-          onChange={(value) => onChange("cantidad", value)}
-          type="number"
-          value={form.cantidad}
-        />
+        <SelectField
+          disabled={isEditing}
+          error={errors.recurso_id}
+          label="Recurso"
+          onChange={(value) => onChange("recurso_id", value)}
+          value={form.recurso_id}
+        >
+          <option value="">Seleccionar recurso</option>
+          {resources
+            .filter((resource) => resourceMatchesApuGroup(resource, form.grupo))
+            .map((resource) => (
+              <option key={resource.id} value={resource.id}>
+                {resource.nombre}
+              </option>
+            ))}
+        </SelectField>
 
-        <TextField
-          error={errors.desperdicio_porcentaje}
-          label="Desperdicio %"
-          onChange={(value) => onChange("desperdicio_porcentaje", value)}
-          type="number"
-          value={form.desperdicio_porcentaje}
-        />
+        <SelectField
+          label="Tipo de calculo"
+          onChange={(value) => onChange("tipo_calculo_apu", value as TipoCalculoApu)}
+          value={form.tipo_calculo_apu}
+        >
+          <option value="mano_obra_rendimiento">Cuadrilla por rendimiento</option>
+          <option value="material_desperdicio">Material con desperdicio global</option>
+          <option value="equipo_hm_rendimiento">Equipo HM por rendimiento</option>
+          <option value="equipo_cantidad_fija">Cantidad fija</option>
+          <option value="herramientas_porcentaje_mano_obra">% mano de obra</option>
+        </SelectField>
 
-        <TextField
-          error={errors.rendimiento_factor}
-          label="Factor rendimiento"
-          onChange={(value) => onChange("rendimiento_factor", value)}
-          type="number"
-          value={form.rendimiento_factor}
-        />
-
-        <div className="grid gap-4 md:col-span-2 md:grid-cols-2 2xl:col-span-1 2xl:grid-cols-1">
+        {form.tipo_calculo_apu === "mano_obra_rendimiento" ||
+        form.tipo_calculo_apu === "equipo_hm_rendimiento" ? (
           <TextField
-            error={errors.gastos_generales_porcentaje}
-            label="Gastos generales %"
-            onChange={(value) => onChange("gastos_generales_porcentaje", value)}
+            error={errors.cuadrilla}
+            label="Cuadrilla"
+            onChange={(value) => onChange("cuadrilla", value)}
             type="number"
-            value={form.gastos_generales_porcentaje}
+            value={form.cuadrilla}
           />
+        ) : form.tipo_calculo_apu === "herramientas_porcentaje_mano_obra" ? (
           <TextField
-            error={errors.utilidad_porcentaje}
-            label="Utilidad %"
-            onChange={(value) => onChange("utilidad_porcentaje", value)}
+            error={errors.porcentaje_aplicado}
+            label="% mano de obra"
+            onChange={(value) => onChange("porcentaje_aplicado", value)}
             type="number"
-            value={form.utilidad_porcentaje}
+            value={form.porcentaje_aplicado}
           />
-        </div>
+        ) : (
+          <TextField
+            error={errors.cantidad_base}
+            label="Cantidad"
+            onChange={(value) => onChange("cantidad_base", value)}
+            type="number"
+            value={form.cantidad_base}
+          />
+        )}
       </div>
 
       <footer className="flex flex-wrap justify-end gap-3 border-t border-slate-200 px-5 py-4">
@@ -134,13 +134,52 @@ export function ApuBuilderPanel({
           disabled={!canMutate || isSubmitting}
           icon={isEditing ? CheckCircle2 : Plus}
           onClick={onSubmit}
-          title={canMutate ? undefined : "Solo admins de proyecto u organización pueden editar el APU"}
+          title={canMutate ? undefined : "Solo admins de proyecto u organizacion pueden editar el APU"}
         >
           {isSubmitting ? "Guardando..." : isEditing ? "Guardar recurso" : "Agregar recurso"}
         </Button>
       </footer>
     </section>
   );
+}
+
+export function buildApuFormFromResource(
+  resource: Recurso
+): Pick<ApuBuilderFormState, "grupo" | "tipo_calculo_apu"> {
+  const grupo = getApuGroupForResource(resource);
+
+  return {
+    grupo,
+    tipo_calculo_apu: inferApuCalculationTypeFromResource({ grupo, unidad: resource.unidad })
+  };
+}
+
+export function defaultApuFormForGroup(group: GrupoApu): Pick<ApuBuilderFormState, "grupo" | "tipo_calculo_apu"> {
+  return {
+    grupo: group,
+    tipo_calculo_apu:
+      group === "mano_obra"
+        ? "mano_obra_rendimiento"
+        : group === "materiales"
+          ? "material_desperdicio"
+          : "equipo_cantidad_fija"
+  };
+}
+
+export function resourceMatchesApuGroup(resource: Recurso, group: GrupoApu) {
+  return getApuGroupForResource(resource) === group;
+}
+
+function getApuGroupForResource(resource: Recurso): GrupoApu {
+  if (resource.tipo === "material") {
+    return "materiales";
+  }
+
+  if (resource.tipo === "mano_obra") {
+    return "mano_obra";
+  }
+
+  return "equipos_herramientas";
 }
 
 function TextField({

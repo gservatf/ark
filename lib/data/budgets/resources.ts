@@ -186,7 +186,7 @@ export async function selectDraftResourceClientQuote(
 
   const { data, error } = await client
     .from("presupuesto_borrador_partida_recursos")
-    .update(updateData)
+    .update(updateData as never)
     .eq("id", draftResourceId)
     .eq("updated_at", expectedUpdatedAt)
     .select("*")

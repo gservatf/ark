@@ -79,7 +79,6 @@ type NormalizedResource = {
   nota?: string | null;
   orden: number;
   parcial: number;
-  rendimientoFactor?: number | null;
   unidad: string;
 };
 
@@ -346,6 +345,9 @@ function buildClientApuExportRows(input: ClientBudgetExportInput) {
 
       return resources.map<ExportResourceRow>((resource) => {
         const price = resource.precio_cliente_snapshot ?? resource.costo_unitario_snapshot + resource.costo_transporte_snapshot;
+        const partial = resource.tipo_calculo_apu === "herramientas_porcentaje_mano_obra"
+          ? roundMoney((price * (resource.porcentaje_aplicado ?? resource.cantidad)) / 100)
+          : roundMoney(resource.cantidad * price);
         return [
           line.orden,
           line.codigo_snapshot,
@@ -354,13 +356,7 @@ function buildClientApuExportRows(input: ClientBudgetExportInput) {
           resource.nombre_snapshot,
           resource.cantidad,
           price,
-          calculateApuResourcePartial({
-            cantidad: resource.cantidad,
-            costo_transporte_snapshot: 0,
-            costo_unitario_snapshot: price,
-            desperdicio_porcentaje: resource.desperdicio_porcentaje,
-            rendimiento_factor: resource.rendimiento_factor
-          }),
+          partial,
           resource.precio_cliente_advertencia_snapshot || ""
         ];
       });
@@ -371,15 +367,11 @@ function calculateClientLineUnitPrice(resources: PresupuestoVersionPartidaRecurs
   return resources.reduce(
     (total, resource) =>
       total +
-      calculateApuResourcePartial({
-        cantidad: resource.cantidad,
-        costo_transporte_snapshot: 0,
-        costo_unitario_snapshot:
-          resource.precio_cliente_snapshot ??
-          resource.costo_unitario_snapshot + resource.costo_transporte_snapshot,
-        desperdicio_porcentaje: resource.desperdicio_porcentaje,
-        rendimiento_factor: resource.rendimiento_factor
-      }),
+      roundMoney(
+        resource.cantidad *
+          (resource.precio_cliente_snapshot ??
+            resource.costo_unitario_snapshot + resource.costo_transporte_snapshot)
+      ),
     0
   );
 }
@@ -700,8 +692,8 @@ function normalizeBudgetResources(input: BudgetExportInput): NormalizedResource[
       cantidad: resource.cantidad,
       costo_transporte_snapshot: costoTransporte,
       costo_unitario_snapshot: costoUnitario,
-      desperdicio_porcentaje: resource.desperdicio_porcentaje,
-      rendimiento_factor: resource.rendimiento_factor
+      parcial: resource.parcial_snapshot,
+      tipo_calculo_apu: resource.tipo_calculo_apu
     });
 
     return {
@@ -716,7 +708,6 @@ function normalizeBudgetResources(input: BudgetExportInput): NormalizedResource[
       nota: "motivo_precio_fijado_snapshot" in resource ? resource.motivo_precio_fijado_snapshot : null,
       orden: resource.orden,
       parcial,
-      rendimientoFactor: resource.rendimiento_factor,
       unidad: resource.unidad_snapshot
     };
   });

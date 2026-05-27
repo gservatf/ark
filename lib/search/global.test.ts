@@ -10,14 +10,15 @@ describe("global search", () => {
           categoria: "Obras",
           codigo: "APU-001",
           created_at: "2026-05-01",
-          descripcion: null,
+          desperdicio_materiales_porcentaje: 5,
           estado: "activo",
           especificaciones: null,
           id: "partida-1",
+          jornada_horas: 8,
           nombre: "Muro de ladrillo",
           organizacion_id: "org-1",
-          rendimiento: null,
-          cuadrilla: null,
+          rendimiento: 1,
+          subcategoria: null,
           unidad: "m2",
           updated_at: "2026-05-01"
         }

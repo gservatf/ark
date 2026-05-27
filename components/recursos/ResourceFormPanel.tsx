@@ -1,7 +1,7 @@
-import { useId } from "react";
-import { CheckCircle2, Plus, X } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { CheckCircle2, Pencil, Plus, X } from "lucide-react";
 import { Button } from "@/components/shared/Button";
-import type { EstadoRegistro, Proveedor, TipoRecurso } from "@/types/domain";
+import type { EstadoRegistro, Proveedor, TipoRecurso, UnidadMedida } from "@/types/domain";
 import { resourceStatusLabels, resourceTypeLabels } from "@/components/recursos/resource-ui";
 
 export type ResourceFormState = {
@@ -17,6 +17,7 @@ export type ResourceFormState = {
   tipo: TipoRecurso;
   transporte_aplica: boolean;
   unidad: string;
+  unidad_id: string;
 };
 
 type ResourceFormPanelProps = {
@@ -25,12 +26,16 @@ type ResourceFormPanelProps = {
   isEditing: boolean;
   isSubmitting?: boolean;
   providers: Proveedor[];
+  unidades: UnidadMedida[];
   onCancel: () => void;
   onChange: <Field extends keyof ResourceFormState>(
     field: Field,
     value: ResourceFormState[Field]
   ) => void;
+  onCreateUnidad: (codigo: string) => Promise<UnidadMedida | null>;
+  onPatch: (values: Partial<ResourceFormState>) => void;
   onSubmit: () => void;
+  onUpdateUnidad: (unidadId: string, values: { codigo: string; nombre: string }) => Promise<UnidadMedida | null>;
 };
 
 const resourceTypes: TipoRecurso[] = ["material", "mano_obra", "equipo", "herramienta"];
@@ -43,9 +48,20 @@ export function ResourceFormPanel({
   isSubmitting = false,
   onCancel,
   onChange,
+  onCreateUnidad,
+  onPatch,
   onSubmit,
-  providers
+  onUpdateUnidad,
+  providers,
+  unidades
 }: ResourceFormPanelProps) {
+  const [isAddingUnidad, setIsAddingUnidad] = useState(false);
+  const [isEditingUnidad, setIsEditingUnidad] = useState(false);
+  const activeUnidades = useMemo(
+    () => unidades.filter((unidad) => unidad.estado === "activo" || unidad.id === form.unidad_id),
+    [form.unidad_id, unidades]
+  );
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white shadow-soft">
       <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -76,13 +92,58 @@ export function ResourceFormPanel({
           placeholder="Ej. Cemento Portland Tipo I"
           value={form.nombre}
         />
-        <TextField
+        <CatalogUnitField
           disabled={isSubmitting}
-          error={errors.unidad}
+          error={errors.unidad || errors.unidad_id}
+          isAdding={isAddingUnidad}
+          isEditing={isEditingUnidad}
           label="Unidad"
-          onChange={(value) => onChange("unidad", value)}
-          placeholder="bol, m3, jor, hm"
-          value={form.unidad}
+          onAddingChange={(isAdding) => {
+            setIsAddingUnidad(isAdding);
+            if (isAdding) {
+              setIsEditingUnidad(false);
+            }
+          }}
+          onCreate={async (codigo) => {
+            const unidad = await onCreateUnidad(codigo);
+
+            if (unidad) {
+              onPatch({ unidad: unidad.codigo, unidad_id: unidad.id });
+              return true;
+            }
+
+            return false;
+          }}
+          onSelect={(id) => {
+            const unidad = activeUnidades.find((item) => item.id === id);
+
+            onPatch({
+              unidad: unidad?.codigo || "",
+              unidad_id: unidad?.id || ""
+            });
+          }}
+          onEditingChange={(isEditing) => {
+            setIsEditingUnidad(isEditing);
+            if (isEditing) {
+              setIsAddingUnidad(false);
+            }
+          }}
+          onUpdate={async (id, values) => {
+            const unidad = await onUpdateUnidad(id, values);
+
+            if (unidad) {
+              onPatch({ unidad: unidad.codigo, unidad_id: unidad.id });
+              return true;
+            }
+
+            return false;
+          }}
+          options={activeUnidades.map((unidad) => ({
+            description: unidad.nombre,
+            id: unidad.id,
+            label: unidad.codigo
+          }))}
+          value={form.unidad_id}
         />
         <SelectField
           disabled={isSubmitting}
@@ -260,6 +321,244 @@ function SelectField({
       >
         {children}
       </select>
+    </div>
+  );
+}
+
+function CatalogUnitField({
+  disabled,
+  error,
+  isAdding,
+  isEditing,
+  label,
+  onAddingChange,
+  onCreate,
+  onEditingChange,
+  onSelect,
+  onUpdate,
+  options,
+  value
+}: {
+  disabled?: boolean;
+  error?: string;
+  isAdding: boolean;
+  isEditing: boolean;
+  label: string;
+  onAddingChange: (isAdding: boolean) => void;
+  onCreate: (codigo: string) => Promise<boolean>;
+  onEditingChange: (isEditing: boolean) => void;
+  onSelect: (id: string) => void;
+  onUpdate: (id: string, values: { codigo: string; nombre: string }) => Promise<boolean>;
+  options: Array<{ description?: string; id: string; label: string }>;
+  value: string;
+}) {
+  const selectId = useId();
+  const selectedOption = options.find((option) => option.id === value);
+  const [editCode, setEditCode] = useState("");
+  const [editName, setEditName] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  function closeAddPanel() {
+    onAddingChange(false);
+    setNewValue("");
+    setLocalError(null);
+  }
+
+  function closeEditPanel() {
+    onEditingChange(false);
+    setEditCode("");
+    setEditName("");
+    setLocalError(null);
+  }
+
+  function openEditPanel() {
+    if (!selectedOption) {
+      return;
+    }
+
+    onAddingChange(false);
+    onEditingChange(true);
+    setEditCode(selectedOption.label);
+    setEditName(selectedOption.description || selectedOption.label);
+    setLocalError(null);
+  }
+
+  async function handleCreate() {
+    const trimmedValue = newValue.trim();
+
+    if (!trimmedValue) {
+      setLocalError("Escribe una unidad para agregarla.");
+      return;
+    }
+
+    setIsSaving(true);
+    setLocalError(null);
+    const created = await onCreate(trimmedValue);
+    setIsSaving(false);
+
+    if (!created) {
+      setLocalError("No se pudo agregar. Revisa si ya existe o si tienes permisos.");
+      return;
+    }
+
+    setNewValue("");
+    onAddingChange(false);
+  }
+
+  async function handleUpdate() {
+    const trimmedCode = editCode.trim();
+    const trimmedName = editName.trim();
+
+    if (!value || !trimmedCode || !trimmedName) {
+      setLocalError("Completa codigo y nombre para guardar la unidad.");
+      return;
+    }
+
+    setIsSaving(true);
+    setLocalError(null);
+    const updated = await onUpdate(value, {
+      codigo: trimmedCode,
+      nombre: trimmedName
+    });
+    setIsSaving(false);
+
+    if (!updated) {
+      setLocalError("No se pudo editar. Revisa si ya existe o si tienes permisos.");
+      return;
+    }
+
+    closeEditPanel();
+  }
+
+  return (
+    <div className={`relative block ${isAdding || isEditing ? "z-30" : "z-0"}`}>
+      <label className="text-xs font-bold uppercase text-slate-500" htmlFor={selectId}>
+        {label}
+      </label>
+      <div className="mt-2 flex rounded-xl border border-slate-200 bg-white transition focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100">
+        <select
+          className="h-11 min-w-0 flex-1 rounded-l-xl bg-transparent px-3 text-sm font-medium text-slate-700 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+          disabled={disabled}
+          id={selectId}
+          onChange={(event) => onSelect(event.target.value)}
+          onFocus={() => {
+            onAddingChange(false);
+            closeEditPanel();
+          }}
+          onMouseDown={() => {
+            onAddingChange(false);
+            closeEditPanel();
+          }}
+          value={value}
+        >
+          <option value="">{options.length > 0 ? "Seleccionar unidad" : "No hay unidades"}</option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.description ? `${option.label} - ${option.description}` : option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          className="flex h-11 w-11 shrink-0 items-center justify-center border-l border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-brand-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300"
+          disabled={disabled}
+          onClick={() => {
+            onAddingChange(!isAdding);
+            onEditingChange(false);
+            setNewValue("");
+            setLocalError(null);
+          }}
+          title="Nueva unidad"
+          type="button"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <button
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-r-xl border-l border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-brand-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300"
+          disabled={disabled || !selectedOption}
+          onClick={isEditing ? closeEditPanel : openEditPanel}
+          title="Editar unidad"
+          type="button"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      </div>
+      {isAdding ? (
+        <div className="relative z-40 mt-2 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 shadow-sm sm:grid-cols-[1fr_auto_auto]">
+          <input
+            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+            disabled={isSaving}
+            onChange={(event) => setNewValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void handleCreate();
+              }
+            }}
+            placeholder="Nueva unidad"
+            value={newValue}
+          />
+          <button
+            className="h-10 rounded-lg bg-brand-600 px-3 text-sm font-bold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isSaving}
+            onClick={() => void handleCreate()}
+            type="button"
+          >
+            {isSaving ? "Guardando" : "Agregar"}
+          </button>
+          <button
+            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed"
+            disabled={isSaving}
+            onClick={closeAddPanel}
+            type="button"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : null}
+      {isEditing ? (
+        <div className="relative z-40 mt-2 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 shadow-sm sm:grid-cols-[0.8fr_1fr_auto_auto]">
+          <input
+            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+            disabled={isSaving}
+            onChange={(event) => setEditCode(event.target.value)}
+            placeholder="Codigo"
+            value={editCode}
+          />
+          <input
+            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100"
+            disabled={isSaving}
+            onChange={(event) => setEditName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void handleUpdate();
+              }
+            }}
+            placeholder="Nombre"
+            value={editName}
+          />
+          <button
+            className="h-10 rounded-lg bg-brand-600 px-3 text-sm font-bold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isSaving}
+            onClick={() => void handleUpdate()}
+            type="button"
+          >
+            {isSaving ? "Guardando" : "Guardar"}
+          </button>
+          <button
+            className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed"
+            disabled={isSaving}
+            onClick={closeEditPanel}
+            type="button"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : null}
+      {error ? <span className="mt-1 block text-xs font-semibold text-red-600">{error}</span> : null}
+      {localError ? <span className="mt-1 block text-xs font-semibold text-red-600">{localError}</span> : null}
     </div>
   );
 }

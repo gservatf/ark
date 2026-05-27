@@ -108,7 +108,7 @@ Formulario:
 
 - Nombre.
 - Tipo.
-- Unidad.
+- Unidad desde el catalogo persistente, con acciones para agregar o editar unidades sin salir del formulario.
 - Costo unitario actual.
 - Proveedor.
 - Transporte aplica.
@@ -138,15 +138,30 @@ Vista lista:
 - Nombre.
 - Unidad.
 - CategorÃ­a.
+- Subcategoria cuando exista.
 - Precio unitario estimado.
 - Estado.
 
+Creacion/edicion:
+
+- El boton `Nueva partida` abre un modal grande; no se usa formulario embebido debajo de la tabla.
+- El modal tiene pasos internos `Datos de partida` y `APU`.
+- `Datos de partida` pide solo codigo opcional, nombre, categoria, subcategoria opcional, unidad, rendimiento, jornada, desperdicio global de materiales y notas/especificaciones.
+- Categoria, subcategoria y unidad se seleccionan desde dropdowns persistentes por organizacion. Cada dropdown incluye accion `+` para crear una opcion nueva sin salir del modal; las unidades tambien muestran accion de edicion cuando hay una unidad seleccionada.
+- Las subcategorias se filtran por la categoria seleccionada.
+- Toda partida nueva nace `activo`; estado y cuadrilla no se muestran en la creacion.
+- Se puede guardar la partida sin APU.
+- El footer del modal mantiene `Cancelar`, `Guardar partida` y `Guardar y crear otra partida`.
+- Si se cancela con cambios sin guardar, se muestra confirmacion.
+
 Builder APU:
 
-- Datos de partida.
-- Recursos agrupados por materiales, mano de obra y equipos/herramientas.
-- Cantidades, unidades, costos snapshot, desperdicio y parcial.
-- Resumen de costo directo y precio unitario.
+- Recursos agrupados por `Mano de obra`, `Materiales` y `Equipos`.
+- Mano de obra y equipos `HM` usan cuadrilla, jornada y rendimiento.
+- Materiales usan cantidad base y desperdicio global de la partida, no desperdicio por recurso.
+- Equipos con unidad distinta a `HM` usan cantidad fija.
+- Herramientas manuales equivalen por defecto al `3%` del subtotal de mano de obra.
+- Las tablas muestran cantidad final, costos snapshot, parcial, subtotales por grupo y costo unitario total.
 
 ## Presupuestos
 
