@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 
 import {
@@ -44,6 +44,7 @@ export type ApuDraftResource = Omit<
   "grupo"
 > & {
   grupo: GrupoApu;
+  persistedId?: string;
   tempId: string;
 };
 
@@ -55,6 +56,7 @@ type PartidaFormPanelProps = {
   };
   errors: Partial<Record<keyof PartidaFormState, string>>;
   form: PartidaFormState;
+  initialApuResources?: PartidaRecurso[];
   isEditing: boolean;
   isSubmitting: boolean;
   resourceCatalog: Recurso[];
@@ -84,6 +86,7 @@ export function PartidaFormPanel({
   catalogs,
   errors,
   form,
+  initialApuResources = [],
   isEditing,
   isSubmitting,
   onCreateCategoria,
@@ -99,8 +102,17 @@ export function PartidaFormPanel({
   const [step, setStep] = useState<"datos" | "apu">("datos");
   const [apuForm, setApuForm] = useState<ApuBuilderFormState>(emptyApuForm);
   const [apuResources, setApuResources] = useState<ApuDraftResource[]>([]);
+  const [editingApuTempId, setEditingApuTempId] = useState<string | null>(null);
   const [apuError, setApuError] = useState<string | null>(null);
   const [activeCatalogAdd, setActiveCatalogAdd] = useState<"categoria" | "subcategoria" | "unidad" | null>(null);
+
+  useEffect(() => {
+    setApuResources(initialApuResources.map(buildDraftFromPersistedResource));
+    setApuForm(emptyApuForm);
+    setEditingApuTempId(null);
+    setApuError(null);
+    setStep("datos");
+  }, [initialApuResources]);
 
   const previewResources = useMemo(
     () => buildPreviewResources(apuResources, resourceCatalog, form),
@@ -183,14 +195,53 @@ export function PartidaFormPanel({
       return;
     }
 
-    setApuResources((current) => [
-      ...current,
-      {
-        ...apuForm,
-        tempId: crypto.randomUUID()
-      }
-    ]);
+    if (editingApuTempId) {
+      setApuResources((current) =>
+        current.map((resource) =>
+          resource.tempId === editingApuTempId
+            ? { ...resource, ...apuForm }
+            : resource
+        )
+      );
+      setEditingApuTempId(null);
+    } else {
+      setApuResources((current) => [
+        ...current,
+        {
+          ...apuForm,
+          tempId: crypto.randomUUID()
+        }
+      ]);
+    }
     setApuForm(emptyApuForm);
+  }
+
+  function editApuResource(tempId: string) {
+    const resource = apuResources.find((item) => item.tempId === tempId);
+
+    if (!resource) {
+      return;
+    }
+
+    setApuForm({
+      cantidad_base: resource.cantidad_base,
+      cuadrilla: resource.cuadrilla,
+      grupo: resource.grupo,
+      porcentaje_aplicado: resource.porcentaje_aplicado,
+      recurso_id: resource.recurso_id,
+      tipo_calculo_apu: resource.tipo_calculo_apu
+    });
+    setEditingApuTempId(tempId);
+    setApuError(null);
+  }
+
+  function removeApuResource(tempId: string) {
+    setApuResources((current) => current.filter((item) => item.tempId !== tempId));
+
+    if (editingApuTempId === tempId) {
+      setEditingApuTempId(null);
+      setApuForm(emptyApuForm);
+    }
   }
 
   function handleCancel() {
@@ -400,8 +451,23 @@ export function PartidaFormPanel({
                   ) : (
                     <TextField label="Cantidad" onChange={(value) => changeApu("cantidad_base", value)} type="number" value={apuForm.cantidad_base} />
                   )}
-                  <Button className="h-11 w-full justify-center" icon={Plus} onClick={addApuResource}>Agregar al APU</Button>
+                  <Button className="h-11 w-full justify-center" icon={editingApuTempId ? Save : Plus} onClick={addApuResource}>
+                    {editingApuTempId ? "Actualizar APU" : "Agregar al APU"}
+                  </Button>
                 </div>
+                {editingApuTempId ? (
+                  <button
+                    className="mt-3 text-sm font-semibold text-slate-500 hover:text-slate-800"
+                    onClick={() => {
+                      setEditingApuTempId(null);
+                      setApuForm(emptyApuForm);
+                      setApuError(null);
+                    }}
+                    type="button"
+                  >
+                    Cancelar edicion de recurso
+                  </button>
+                ) : null}
                 {apuError ? <p className="mt-3 text-sm font-semibold text-red-600">{apuError}</p> : null}
               </section>
 
@@ -437,7 +503,15 @@ export function PartidaFormPanel({
                           <td className="px-4 py-3 text-right">{formatCurrency(resource.costo_unitario_snapshot + resource.costo_transporte_snapshot)}</td>
                           <td className="px-4 py-3 text-right font-bold">{formatCurrency(resource.parcial)}</td>
                           <td className="px-4 py-3 text-right">
-                            <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600" onClick={() => setApuResources((current) => current.filter((item) => item.tempId !== resource.id))} type="button">
+                            <button
+                              className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-brand-600"
+                              onClick={() => editApuResource(resource.id)}
+                              title="Editar recurso APU"
+                              type="button"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600" onClick={() => removeApuResource(resource.id)} title="Quitar recurso APU" type="button">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
@@ -478,6 +552,25 @@ export function PartidaFormPanel({
       </section>
     </div>
   );
+}
+
+function buildDraftFromPersistedResource(resource: PartidaRecurso): ApuDraftResource {
+  return {
+    cantidad_base: resource.cantidad_base === null || resource.cantidad_base === undefined
+      ? ""
+      : String(resource.cantidad_base),
+    cuadrilla: resource.cuadrilla === null || resource.cuadrilla === undefined
+      ? ""
+      : String(resource.cuadrilla),
+    grupo: resource.grupo,
+    porcentaje_aplicado: resource.porcentaje_aplicado === null || resource.porcentaje_aplicado === undefined
+      ? "3"
+      : String(resource.porcentaje_aplicado),
+    persistedId: resource.id,
+    recurso_id: resource.recurso_id,
+    tempId: resource.id,
+    tipo_calculo_apu: resource.tipo_calculo_apu
+  };
 }
 
 function partidaContext(form: PartidaFormState) {

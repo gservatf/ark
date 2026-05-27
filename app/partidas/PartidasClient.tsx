@@ -27,11 +27,14 @@ import { PresenceBar } from "@/components/shared/PresenceBar";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import {
   createPartida,
+  createPartidaResource,
   createPartidaWithResources,
   deactivatePartida,
+  deletePartidaResource,
   listOrganizationPartidaResources,
   listPartidas,
-  updatePartida
+  updatePartida,
+  updatePartidaResource
 } from "@/lib/data/items";
 import {
   createPartidaCategoria,
@@ -42,7 +45,7 @@ import {
   type PartidaCatalogs
 } from "@/lib/data/partida-catalogs";
 import { listResources } from "@/lib/data/resources";
-import type { DataError, DataScope } from "@/lib/data/types";
+import type { DataClient, DataError, DataScope } from "@/lib/data/types";
 import { canManageOrganizationCatalog, resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
@@ -54,13 +57,17 @@ import {
   partidaFilterDefaults,
   serializePartidaFilters
 } from "@/lib/ui/url-state";
-import { partidaInputSchema, type PartidaInput } from "@/lib/validations/items";
+import { partidaInputSchema, type PartidaApuResourceFormInput, type PartidaInput } from "@/lib/validations/items";
 import type { Partida, PartidaCategoria, PartidaRecurso, PartidaSubcategoria, Recurso, UnidadMedida } from "@/types/domain";
 
 type WorkspaceState = {
   canMutate: boolean;
   scope: DataScope;
 };
+
+type ApuResourceSyncResult =
+  | { data: PartidaRecurso[]; ok: true }
+  | { error: DataError; ok: false };
 
 const emptyForm: PartidaFormState = {
   categoria: "",
@@ -212,6 +219,15 @@ export default function PartidasPage() {
     topicScope: activityTopic
   });
   const editingPartida = editingId ? partidas.find((partida) => partida.id === editingId) : undefined;
+  const editingApuResources = useMemo(
+    () =>
+      editingId
+        ? apuResources
+            .filter((resource) => resource.partida_id === editingId)
+            .sort((first, second) => first.orden - second.orden)
+        : [],
+    [apuResources, editingId]
+  );
   const presenceTarget: PresenceTarget | null = editingPartida
     ? { id: editingPartida.id, label: editingPartida.nombre, type: "partida" }
     : null;
@@ -394,6 +410,70 @@ export default function PartidasPage() {
     return result.data;
   }
 
+  async function syncPartidaApuResources(
+    client: DataClient,
+    partidaId: string,
+    resources: ApuDraftResource[]
+  ): Promise<ApuResourceSyncResult> {
+    if (!workspace) {
+      return {
+        error: {
+          code: "permission",
+          message: "No se encontro una organizacion activa para guardar el APU."
+        },
+        ok: false
+      };
+    }
+
+    const existingResources = apuResources.filter((resource) => resource.partida_id === partidaId);
+    const submittedIds = new Set(
+      resources
+        .map((resource) => resource.persistedId)
+        .filter((id): id is string => Boolean(id))
+    );
+    const syncedResources: PartidaRecurso[] = [];
+
+    for (const existing of existingResources) {
+      if (!submittedIds.has(existing.id)) {
+        const deleteResult = await deletePartidaResource(client, workspace.scope, existing.id, {
+          base: existing,
+          expectedUpdatedAt: existing.updated_at
+        });
+
+        if (!deleteResult.ok) {
+          return deleteResult;
+        }
+      }
+    }
+
+    for (let index = 0; index < resources.length; index += 1) {
+      const resource = resources[index];
+      const input = draftResourceToInput(resource, partidaId, index);
+      const baseResource = resource.persistedId
+        ? existingResources.find((existing) => existing.id === resource.persistedId)
+        : undefined;
+
+      const result = resource.persistedId
+        ? await updatePartidaResource(client, workspace.scope, resource.persistedId, input, {
+            attempted: input,
+            base: baseResource,
+            expectedUpdatedAt: baseResource?.updated_at
+          })
+        : await createPartidaResource(client, workspace.scope, input);
+
+      if (!result.ok) {
+        return result;
+      }
+
+      syncedResources.push(result.data);
+    }
+
+    return {
+      data: syncedResources.sort((first, second) => first.orden - second.orden),
+      ok: true
+    };
+  }
+
   async function handleSubmit(resources: ApuDraftResource[] = [], createAnother = false) {
     if (!workspace) {
       setMutationError("No se encontró una organización activa para guardar la partida.");
@@ -417,27 +497,56 @@ export default function PartidasPage() {
     setMutationError(null);
 
     const basePartida = editingId ? partidas.find((partida) => partida.id === editingId) : undefined;
-    const result = editingId
-      ? await updatePartida(createBrowserClient(), workspace.scope, editingId, formData, {
+    const client = createBrowserClient();
+
+    if (editingId) {
+      const partidaResult = await updatePartida(client, workspace.scope, editingId, formData, {
           attempted: formData,
           base: basePartida,
           expectedUpdatedAt: basePartida?.updated_at
+        });
+
+      if (!partidaResult.ok) {
+        setIsSaving(false);
+        if (isOptimisticConflict(partidaResult.error)) {
+          setConflict({
+            error: partidaResult.error,
+            retry: () => retryPartidaUpdate(editingId, formData, partidaResult.error)
+          });
+        }
+        setMutationError(errorMessage(partidaResult.error));
+        return;
+      }
+
+      const resourcesResult = await syncPartidaApuResources(client, editingId, resources);
+      setIsSaving(false);
+
+      if (!resourcesResult.ok) {
+        setMutationError(errorMessage(resourcesResult.error));
+        return;
+      }
+
+      setPartidas((current) =>
+        current.map((partida) => (partida.id === partidaResult.data.id ? partidaResult.data : partida))
+      );
+      setApuResources((current) =>
+        [
+          ...current.filter((resource) => resource.partida_id !== editingId),
+          ...resourcesResult.data
+        ].sort((first, second) => first.orden - second.orden)
+      );
+      setShowForm(false);
+      setEditingId(null);
+      setFormErrors({});
+      return;
+    }
+
+    const result = resources.length > 0
+      ? await createPartidaWithResources(client, workspace.scope, {
+          partida: formData,
+          resources: resources.map((resource, index) => draftResourceToInput(resource, "", index))
         })
-      : resources.length > 0
-        ? await createPartidaWithResources(createBrowserClient(), workspace.scope, {
-            partida: formData,
-            resources: resources.map((resource, index) => ({
-              cantidad_base: numberOrNull(resource.cantidad_base),
-              cuadrilla: numberOrNull(resource.cuadrilla),
-              grupo: resource.grupo,
-              orden: index + 1,
-              partida_id: "",
-              porcentaje_aplicado: numberOrNull(resource.porcentaje_aplicado),
-              recurso_id: resource.recurso_id,
-              tipo_calculo_apu: resource.tipo_calculo_apu
-            }))
-          })
-        : await createPartida(createBrowserClient(), workspace.scope, formData);
+      : await createPartida(client, workspace.scope, formData);
 
     setIsSaving(false);
 
@@ -673,6 +782,7 @@ export default function PartidasPage() {
                 catalogs={partidaCatalogs}
                 errors={formErrors}
                 form={form}
+                initialApuResources={editingApuResources}
                 isEditing={Boolean(editingId)}
                 isSubmitting={isSaving}
                 onCreateCategoria={handleCreateCategoria}
@@ -759,6 +869,23 @@ function validateForm(form: PartidaFormState): {
   });
 
   return { errors };
+}
+
+function draftResourceToInput(
+  resource: ApuDraftResource,
+  partidaId: string,
+  index: number
+): PartidaApuResourceFormInput {
+  return {
+    cantidad_base: numberOrNull(resource.cantidad_base),
+    cuadrilla: numberOrNull(resource.cuadrilla),
+    grupo: resource.grupo,
+    orden: index + 1,
+    partida_id: partidaId,
+    porcentaje_aplicado: numberOrNull(resource.porcentaje_aplicado),
+    recurso_id: resource.recurso_id,
+    tipo_calculo_apu: resource.tipo_calculo_apu
+  };
 }
 
 function errorMessage(error: DataError) {
