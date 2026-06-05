@@ -178,6 +178,13 @@ Estado Fase 1.13:
 - Los contratos quedan preparados para fases futuras, pero Supabase Auth sigue siendo la implementacion interna actual.
 - Login, registro, callback, recuperacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.14:
+
+- `lib/auth/client.ts` amplia la fachada Auth con `signInWithPassword()`, `sendPasswordReset()` y `updatePassword()`.
+- Las nuevas funciones usan contratos neutrales (`SignInInput`, `PasswordResetInput`, `UpdatePasswordInput`, `AuthResult`, `AuthError` y `AuthUser`) y normalizan errores sin exponer objetos de Supabase a futuros consumidores.
+- Supabase Auth sigue siendo la implementacion interna actual; las pantallas de login, registro, recuperacion y actualizacion de clave todavia no fueron migradas a esta fachada.
+- OAuth, signup, callback, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
