@@ -234,6 +234,14 @@ Estado Fase 1.24:
 - Internamente sigue usando los RPCs Supabase `list_workspace_organizations` y `complete_user_onboarding`.
 - `/onboarding`, middleware, callback, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.25:
+
+- `/onboarding` ya no importa `createBrowserClient` ni llama RPCs Supabase directamente.
+- La pantalla usa `createDataBrowserClient()` y la fachada `lib/data/onboarding.ts` para consultar estado y completar onboarding.
+- Se conservaron formulario, validaciones, mensajes visibles, redireccion a `/`, `router.refresh()` y el criterio de organizacion personal activa.
+- Los RPCs `list_workspace_organizations` y `complete_user_onboarding` siguen siendo la implementacion interna actual.
+- Middleware, callback, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

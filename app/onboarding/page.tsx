@@ -6,11 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Button } from "@/components/shared/Button";
-import { createBrowserClient } from "@/lib/supabase/browser";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
+import { completeUserOnboarding, getOnboardingStatus } from "@/lib/data/onboarding";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserClient(), []);
+  const client = useMemo(() => createDataBrowserClient(), []);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,10 +20,9 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function checkWorkspace() {
-      const { data } = await supabase.rpc("list_workspace_organizations");
-      const organizations = (data || []) as Array<{ tipoOrganizacion?: string }>;
+      const statusResult = await getOnboardingStatus(client);
 
-      if (organizations.some((organization) => organization.tipoOrganizacion === "personal")) {
+      if (statusResult.ok && statusResult.data.hasPersonalOrganization) {
         router.replace("/");
         router.refresh();
         return;
@@ -32,7 +32,7 @@ export default function OnboardingPage() {
     }
 
     void checkWorkspace();
-  }, [router, supabase]);
+  }, [client, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,15 +45,15 @@ export default function OnboardingPage() {
 
     setIsLoading(true);
 
-    const { error: rpcError } = await supabase.rpc("complete_user_onboarding", {
-      apellido_usuario: lastName,
-      nombre_usuario: firstName
+    const onboardingResult = await completeUserOnboarding(client, {
+      apellido: lastName,
+      nombre: firstName
     });
 
     setIsLoading(false);
 
-    if (rpcError) {
-      setError(rpcError.message || "No se pudo guardar tu perfil.");
+    if (!onboardingResult.ok) {
+      setError(onboardingResult.error.message || "No se pudo guardar tu perfil.");
       return;
     }
 
