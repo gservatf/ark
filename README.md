@@ -242,6 +242,13 @@ Estado Fase 1.25:
 - Los RPCs `list_workspace_organizations` y `complete_user_onboarding` siguen siendo la implementacion interna actual.
 - Middleware, callback, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.26:
+
+- `server/auth/session.ts` prepara una frontera server-side neutral para sesion/Auth con `getServerUser()`, `getServerSession()` y `requireServerUser()`.
+- Las funciones devuelven contratos neutrales `AuthResult<T>` y `AuthUser`; `ServerAuthSession` evita exponer tipos de Supabase a futuros consumidores.
+- Supabase SSR sigue siendo la implementacion interna mediante `lib/supabase/server.ts`; no se cambiaron cookies ni adaptadores SSR.
+- Middleware, callback OAuth, onboarding, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a esta fachada todavia.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
