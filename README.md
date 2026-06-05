@@ -256,6 +256,13 @@ Estado Fase 1.27:
 - Las funciones devuelven `DataResult<T>` y contratos propios (`ActiveWorkspaceStatus`, `WorkspaceOnboardingStatus`) sin exponer tipos Supabase.
 - Supabase/RLS sigue siendo la implementacion interna mediante `lib/supabase/server.ts`; middleware, callback, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a esta fachada todavia.
 
+Estado Fase 1.29:
+
+- `server/workspace/onboarding.ts` agrega helpers puros que aceptan un cliente externo compatible: `hasActiveWorkspaceWithClient()` y `hasVisibleActiveWorkspaceWithClient()`.
+- `hasActiveWorkspaceWithClient()` mantiene la preparacion backend explicita filtrando por `user_id`; `hasVisibleActiveWorkspaceWithClient()` preserva mejor el comportamiento actual del middleware porque solo exige membresia activa visible por RLS/sesion.
+- Las funciones publicas existentes `hasActiveWorkspace()` y `needsOnboarding()` se mantienen sin cambios de firma.
+- Middleware, callback, cookies, redirecciones, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a estos helpers todavia.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
