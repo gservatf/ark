@@ -1,11 +1,8 @@
 import { createBrowserClient } from "@/lib/supabase/browser";
 
-export type CurrentUser = {
-  email: string | null;
-  id: string;
-};
+import type { AuthUser } from "./contracts";
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = createBrowserClient();
   const {
     data: { user }

@@ -171,6 +171,13 @@ Estado Fase 1.12:
 - `Topbar` tampoco importa `createBrowserClient` desde `lib/supabase/browser`; para datos usa `createDataBrowserClient` y para Auth usa la nueva fachada.
 - Supabase Auth sigue siendo la implementacion interna actual de la fachada; login, registro, callback, recuperacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.13:
+
+- `lib/auth/contracts.ts` define contratos neutrales de Auth (`AuthUser`, `AuthResult`, `AuthError`, codigos de error e inputs de login, registro, recuperacion y cambio de clave).
+- `lib/auth/client.ts` usa `AuthUser` en `getCurrentUser()`; `signOut()` conserva su firma simple para no alterar el flujo actual del `Topbar`.
+- Los contratos quedan preparados para fases futuras, pero Supabase Auth sigue siendo la implementacion interna actual.
+- Login, registro, callback, recuperacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
