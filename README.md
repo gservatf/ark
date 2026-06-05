@@ -291,6 +291,13 @@ Estado Fase 1.34:
 - Supabase SSR/Auth sigue siendo la implementacion interna mediante `createServerClient()` y `exchangeCodeForSession()`.
 - `app/auth/callback/route.ts`, middleware, login, registro, recuperacion, actualizacion, onboarding, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a esta fachada todavia.
 
+Estado Fase 1.35:
+
+- `app/auth/callback/route.ts` usa la fachada `server/auth/callback.ts` para intercambiar el codigo OAuth y resolver redirects de exito/error.
+- Se eliminaron imports directos de Supabase desde el route handler; `createServerClient()` y `exchangeCodeForSession()` quedan encapsulados en la fachada.
+- Se conserva el flujo visible: code valido redirige al destino seguro, ausencia de code o error redirige a `/login?oauth=error`.
+- La sanitizacion de `next`, cookies SSR, sesion, middleware, login, registro, recuperacion, actualizacion, onboarding, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
