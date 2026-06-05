@@ -199,6 +199,13 @@ Estado Fase 1.16:
 - Supabase Auth sigue siendo la implementacion interna actual de la fachada.
 - Login, registro, callback, recuperacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.17:
+
+- `/login` usa `signInWithPassword()` desde `lib/auth/client.ts` para el acceso por correo y contrasena.
+- Se conservan CAPTCHA, mensaje de error generico, reset del captcha, `next` sanitizado y redireccion posterior.
+- El flujo OAuth con Google sigue usando Supabase directamente en la pantalla; queda pendiente para una fase separada.
+- Registro, callback, middleware, onboarding, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

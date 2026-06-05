@@ -8,6 +8,7 @@ import { Suspense, useState } from "react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
+import { signInWithPassword } from "@/lib/auth/client";
 import { buildOAuthRedirectTo } from "@/lib/auth/oauth";
 import { sanitizeNextPath } from "@/lib/auth/security";
 import { createBrowserClient } from "@/lib/supabase/browser";
@@ -38,17 +39,16 @@ function LoginForm() {
 
     setIsLoading(true);
 
-    const supabase = createBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const signInResult = await signInWithPassword({
+      captchaToken,
       email,
-      options: captchaToken ? { captchaToken } : undefined,
       password
     });
 
     setIsLoading(false);
     setCaptchaResetSignal((current) => current + 1);
 
-    if (signInError) {
+    if (!signInResult.ok) {
       setError("No se pudo iniciar sesión. Revisa el correo y la contraseña.");
       return;
     }
