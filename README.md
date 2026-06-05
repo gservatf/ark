@@ -263,6 +263,13 @@ Estado Fase 1.29:
 - Las funciones publicas existentes `hasActiveWorkspace()` y `needsOnboarding()` se mantienen sin cambios de firma.
 - Middleware, callback, cookies, redirecciones, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a estos helpers todavia.
 
+Estado Fase 1.30:
+
+- `server/middleware/session.ts` prepara un helper especifico para middleware con `createMiddlewareSupabaseClient()`, `getMiddlewareUser()` y `getMiddlewareWorkspaceStatus()`.
+- La creacion del cliente usa `@supabase/ssr`, `NextRequest` y `NextResponse`, leyendo cookies desde `request.cookies` y escribiendo set/remove en `response.cookies`, sin usar `cookies()` de `next/headers`; si faltan variables Supabase devuelve `null` para conservar el enfoque tolerante del middleware actual.
+- `getMiddlewareWorkspaceStatus()` queda listo para usar `hasVisibleActiveWorkspaceWithClient()` y preservar el criterio actual basado en membresia activa visible por RLS/sesion.
+- Middleware real, callback, cookies en runtime real, redirecciones, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a este helper todavia.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

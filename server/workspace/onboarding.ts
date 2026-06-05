@@ -19,14 +19,17 @@ export type ActiveWorkspaceLookupInput = {
 };
 
 export type WorkspaceRuntimeClient = {
-  from(table: "organizacion_miembros"): WorkspaceMembershipQuery;
+  from(table: "organizacion_miembros"): WorkspaceMembershipSelectQuery;
 };
 
-type WorkspaceMembershipQuery = {
-  eq(column: string, value: string): WorkspaceMembershipQuery;
-  limit(count: number): WorkspaceMembershipQuery;
+type WorkspaceMembershipSelectQuery = {
+  select(columns: string): WorkspaceMembershipFilterQuery;
+};
+
+type WorkspaceMembershipFilterQuery = {
+  eq(column: string, value: string): WorkspaceMembershipFilterQuery;
+  limit(count: number): WorkspaceMembershipFilterQuery;
   maybeSingle(): Promise<{ data: unknown; error: unknown }>;
-  select(columns: string): WorkspaceMembershipQuery;
 };
 
 type ActiveMembershipRecord = {
