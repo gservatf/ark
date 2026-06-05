@@ -6,8 +6,8 @@ import { useState } from "react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
+import { sendPasswordReset } from "@/lib/auth/client";
 import { buildOAuthRedirectTo } from "@/lib/auth/oauth";
-import { createBrowserClient } from "@/lib/supabase/browser";
 
 export default function RecuperarClavePage() {
   const [email, setEmail] = useState("");
@@ -29,15 +29,15 @@ export default function RecuperarClavePage() {
 
     setIsLoading(true);
 
-    const supabase = createBrowserClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      ...(captchaToken ? { captchaToken } : {}),
+    const resetResult = await sendPasswordReset({
+      captchaToken,
+      email,
       redirectTo: buildOAuthRedirectTo("/actualizar-clave")
     });
     setIsLoading(false);
     setCaptchaResetSignal((current) => current + 1);
 
-    if (resetError) {
+    if (!resetResult.ok) {
       setError("No se pudo enviar el correo de recuperación.");
       return;
     }

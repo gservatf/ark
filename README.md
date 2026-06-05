@@ -185,6 +185,13 @@ Estado Fase 1.14:
 - Supabase Auth sigue siendo la implementacion interna actual; las pantallas de login, registro, recuperacion y actualizacion de clave todavia no fueron migradas a esta fachada.
 - OAuth, signup, callback, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.15:
+
+- `/recuperar-clave` ya no importa `createBrowserClient` ni llama directamente `supabase.auth.resetPasswordForEmail()`.
+- La pantalla usa `sendPasswordReset()` desde `lib/auth/client.ts`, conservando CAPTCHA, `redirectTo` hacia `/actualizar-clave` y los mismos mensajes visibles de exito/error.
+- Supabase Auth sigue siendo la implementacion interna actual de la fachada.
+- Login, registro, callback, actualizacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
