@@ -5,6 +5,7 @@ import type {
   AuthErrorCode,
   AuthResult,
   AuthUser,
+  OAuthSignInInput,
   PasswordResetInput,
   SignInInput,
   UpdatePasswordInput
@@ -69,6 +70,20 @@ export async function updatePassword(input: UpdatePasswordInput): Promise<AuthRe
   }
 
   return authSuccess(normalizeAuthUser(data.user));
+}
+
+export async function signInWithOAuth(input: OAuthSignInInput): Promise<AuthResult<null>> {
+  const supabase = createBrowserClient();
+  const { error } = await supabase.auth.signInWithOAuth({
+    options: input.redirectTo ? { redirectTo: input.redirectTo } : undefined,
+    provider: input.provider
+  });
+
+  if (error) {
+    return authFailure(error);
+  }
+
+  return authSuccess(null);
 }
 
 function authSuccess<T>(data: T): AuthResult<T> {

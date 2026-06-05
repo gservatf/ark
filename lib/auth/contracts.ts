@@ -21,6 +21,13 @@ export type AuthUser = {
   id: string;
 };
 
+export type OAuthProvider = "google";
+
+export type OAuthSignInInput = {
+  provider: OAuthProvider;
+  redirectTo?: string;
+};
+
 export type SignInInput = {
   captchaToken?: string | null;
   email: string;

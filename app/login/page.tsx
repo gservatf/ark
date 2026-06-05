@@ -8,10 +8,9 @@ import { Suspense, useState } from "react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
-import { signInWithPassword } from "@/lib/auth/client";
+import { signInWithOAuth, signInWithPassword } from "@/lib/auth/client";
 import { buildOAuthRedirectTo } from "@/lib/auth/oauth";
 import { sanitizeNextPath } from "@/lib/auth/security";
-import { createBrowserClient } from "@/lib/supabase/browser";
 
 function LoginForm() {
   const router = useRouter();
@@ -61,15 +60,12 @@ function LoginForm() {
     setError(null);
     setIsGoogleLoading(true);
 
-    const supabase = createBrowserClient();
-    const { error: googleError } = await supabase.auth.signInWithOAuth({
-      options: {
-        redirectTo: buildOAuthRedirectTo(searchParams.get("next"))
-      },
-      provider: "google"
+    const googleResult = await signInWithOAuth({
+      provider: "google",
+      redirectTo: buildOAuthRedirectTo(searchParams.get("next"))
     });
 
-    if (googleError) {
+    if (!googleResult.ok) {
       setError("No se pudo iniciar sesión con Google. Revisa la configuración de OAuth.");
       setIsGoogleLoading(false);
     }

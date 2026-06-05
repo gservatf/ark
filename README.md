@@ -206,6 +206,13 @@ Estado Fase 1.17:
 - El flujo OAuth con Google sigue usando Supabase directamente en la pantalla; queda pendiente para una fase separada.
 - Registro, callback, middleware, onboarding, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.18:
+
+- `lib/auth/contracts.ts` agrega contratos neutrales para OAuth (`OAuthProvider` y `OAuthSignInInput`).
+- `lib/auth/client.ts` expone `signInWithOAuth()` y mantiene Supabase Auth como implementacion interna.
+- `/login` ya no importa `createBrowserClient` ni llama directamente `supabase.auth.signInWithOAuth()`; el boton de Google conserva provider, `redirectTo`, manejo de `next` y mensajes visibles.
+- El callback OAuth sigue dependiendo de Supabase y no fue tocado; registro, middleware, onboarding, Realtime, presupuestos y migraciones tampoco se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
