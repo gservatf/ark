@@ -284,6 +284,13 @@ Estado Fase 1.32:
 - El criterio funcional se mantiene: membresia activa visible por sesion/RLS evita onboarding; ausencia de membresia activa redirige a `/onboarding`.
 - Rutas publicas, rutas guest-only, redirecciones, cookies SSR, callback, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.34:
+
+- `server/auth/callback.ts` prepara una fachada server-side para callback OAuth con `exchangeOAuthCodeForSession()`, `getOAuthSuccessRedirect()` y `getOAuthErrorRedirect()`.
+- La fachada reutiliza `getOAuthCallbackRedirectUrl()` para conservar la sanitizacion de `next` y mantiene el fallback `/login?oauth=error`.
+- Supabase SSR/Auth sigue siendo la implementacion interna mediante `createServerClient()` y `exchangeCodeForSession()`.
+- `app/auth/callback/route.ts`, middleware, login, registro, recuperacion, actualizacion, onboarding, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a esta fachada todavia.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
