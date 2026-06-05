@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { createMiddlewareSupabaseClient, getMiddlewareUser } from "@/server/middleware/session";
+import {
+  createMiddlewareSupabaseClient,
+  getMiddlewareUser,
+  getMiddlewareWorkspaceStatus
+} from "@/server/middleware/session";
 
 const authPaths = new Set([
   "/login",
@@ -64,24 +68,24 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && !isOnboarding && !isAuthPath) {
-    let data;
+    let needsOnboarding = false;
 
     try {
-      const membershipResult = await withTimeout(
-        supabase
-          .from("organizacion_miembros")
-          .select("id")
-          .eq("estado", "activo")
-          .limit(1)
-          .maybeSingle(),
+      const workspaceResult = await withTimeout(
+        getMiddlewareWorkspaceStatus(supabase, user.id),
         "organizacion_miembros.middleware"
       );
-      data = membershipResult.data;
+
+      if (!workspaceResult.ok) {
+        return supabaseContext.getResponse();
+      }
+
+      needsOnboarding = workspaceResult.data.needsOnboarding;
     } catch {
       return supabaseContext.getResponse();
     }
 
-    if (!data) {
+    if (needsOnboarding) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/onboarding";
       redirectUrl.search = "";

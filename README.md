@@ -277,6 +277,13 @@ Estado Fase 1.31:
 - La consulta directa a `organizacion_miembros`, el criterio de onboarding, rutas publicas, rutas guest-only, cookies reales y redirecciones se mantienen intactas.
 - `getMiddlewareWorkspaceStatus()` queda pendiente para una fase posterior; callback, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.32:
+
+- `middleware.ts` usa `getMiddlewareWorkspaceStatus()` para reemplazar la consulta directa a `organizacion_miembros`.
+- Se conserva el timeout de 2 segundos con la etiqueta `organizacion_miembros.middleware`; si la consulta falla o vence el timeout, la request se deja pasar como antes.
+- El criterio funcional se mantiene: membresia activa visible por sesion/RLS evita onboarding; ausencia de membresia activa redirige a `/onboarding`.
+- Rutas publicas, rutas guest-only, redirecciones, cookies SSR, callback, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
