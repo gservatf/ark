@@ -227,6 +227,13 @@ Estado Fase 1.21:
 - Supabase Auth sigue siendo la implementacion interna actual de la fachada.
 - Callback, middleware, onboarding, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.24:
+
+- `lib/data/onboarding.ts` introduce una fachada neutral para onboarding con `getOnboardingStatus()` y `completeUserOnboarding()`.
+- La fachada define contratos `OnboardingInput`, `OnboardingStatus` y `CompleteOnboardingResult`.
+- Internamente sigue usando los RPCs Supabase `list_workspace_organizations` y `complete_user_onboarding`.
+- `/onboarding`, middleware, callback, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
