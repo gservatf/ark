@@ -25,6 +25,7 @@ import {
   calculateApuDirectCost,
   calculateApuUnitPrice
 } from "@/lib/calculations/apu";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import {
   createPartidaResource,
@@ -39,7 +40,6 @@ import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { usePresenceChannel } from "@/lib/realtime/usePresenceChannel";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import { validateFormData } from "@/lib/validations/form";
 import {
   partidaApuResourceFormSchema,
@@ -88,7 +88,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
     setLoadError(null);
     setMutationError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const workspaceResult = await resolveOrganizationWorkspace(supabase);
 
     if (!workspaceResult.ok) {
@@ -230,12 +230,12 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
     setMutationError(null);
 
     const result = editingId
-      ? await updatePartidaResource(createBrowserClient(), workspace.scope, editingId, formData, {
+      ? await updatePartidaResource(createDataBrowserClient(), workspace.scope, editingId, formData, {
           attempted: formData,
           base: editingResource,
           expectedUpdatedAt: editingResource?.updated_at
         })
-      : await createPartidaResource(createBrowserClient(), workspace.scope, formData);
+      : await createPartidaResource(createDataBrowserClient(), workspace.scope, formData);
 
     setIsSaving(false);
 
@@ -290,7 +290,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
     setMutationError(null);
 
     const resource = apuResources.find((item) => item.id === resourceId);
-    const result = await deletePartidaResource(createBrowserClient(), workspace.scope, resourceId, {
+    const result = await deletePartidaResource(createDataBrowserClient(), workspace.scope, resourceId, {
       attempted: null,
       base: resource,
       expectedUpdatedAt: resource?.updated_at
@@ -329,7 +329,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await updatePartidaResource(createBrowserClient(), workspace.scope, resourceId, input, {
+    const result = await updatePartidaResource(createDataBrowserClient(), workspace.scope, resourceId, input, {
       attempted: input,
       expectedUpdatedAt
     });
@@ -358,7 +358,7 @@ export default function PartidaDetailPage({ params }: PartidaDetailPageProps) {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await deletePartidaResource(createBrowserClient(), workspace.scope, resource.id, {
+    const result = await deletePartidaResource(createDataBrowserClient(), workspace.scope, resource.id, {
       attempted: null,
       base: resource,
       expectedUpdatedAt

@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PresenceBar } from "@/components/shared/PresenceBar";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import {
   activateProvider,
@@ -30,6 +31,7 @@ import {
   deactivateProvider,
   deleteProvider,
   getProviderById,
+  listProviderLinkedResources,
   listProviders,
   updateProvider
 } from "@/lib/data/providers";
@@ -39,7 +41,6 @@ import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { usePresenceChannel } from "@/lib/realtime/usePresenceChannel";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import {
   parseProviderFilters,
   providerFilterDefaults,
@@ -94,7 +95,7 @@ export default function ProveedoresPage() {
     setLoadError(null);
     setMutationError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const workspaceResult = await resolveOrganizationWorkspace(supabase);
 
     if (!workspaceResult.ok) {
@@ -110,10 +111,7 @@ export default function ProveedoresPage() {
 
     const [providersResult, resourcesResult] = await Promise.all([
       listProviders(supabase, nextWorkspace.scope),
-      supabase
-        .from("recursos")
-        .select("*")
-        .eq("organizacion_id", nextWorkspace.scope.organizacionId)
+      listProviderLinkedResources(supabase, nextWorkspace.scope)
     ]);
 
     if (!providersResult.ok) {
@@ -122,15 +120,15 @@ export default function ProveedoresPage() {
       return;
     }
 
-    if (resourcesResult.error) {
-      setLoadError(resourcesResult.error.message || "No se pudieron consultar los recursos vinculados.");
+    if (!resourcesResult.ok) {
+      setLoadError(errorMessage(resourcesResult.error));
       setIsLoading(false);
       return;
     }
 
     setWorkspace(nextWorkspace);
     setProviders(providersResult.data);
-    setResources(resourcesResult.data || []);
+    setResources(resourcesResult.data);
     setSelectedProviderId((current) => current || providersResult.data[0]?.id);
     setIsLoading(false);
   }, []);
@@ -218,7 +216,7 @@ export default function ProveedoresPage() {
         return true;
       }
 
-      const result = await getProviderById(createBrowserClient(), workspace.scope, payload.entityId);
+      const result = await getProviderById(createDataBrowserClient(), workspace.scope, payload.entityId);
 
       if (!result.ok) {
         if (result.error.code === "not_found") {
@@ -352,12 +350,12 @@ export default function ProveedoresPage() {
 
     const baseProvider = editingId ? providers.find((provider) => provider.id === editingId) : undefined;
     const result = editingId
-      ? await updateProvider(createBrowserClient(), workspace.scope, editingId, formData, {
+      ? await updateProvider(createDataBrowserClient(), workspace.scope, editingId, formData, {
           attempted: formData,
           base: baseProvider,
           expectedUpdatedAt: baseProvider?.updated_at
         })
-      : await createProvider(createBrowserClient(), workspace.scope, formData);
+      : await createProvider(createDataBrowserClient(), workspace.scope, formData);
 
     setIsSaving(false);
 
@@ -394,12 +392,12 @@ export default function ProveedoresPage() {
     const nextStatus = statusTarget.estado === "activo" ? "inactivo" : "activo";
     const result =
       nextStatus === "activo"
-        ? await activateProvider(createBrowserClient(), workspace.scope, statusTarget.id, {
+        ? await activateProvider(createDataBrowserClient(), workspace.scope, statusTarget.id, {
             attempted: { estado: nextStatus },
             base: statusTarget,
             expectedUpdatedAt: statusTarget.updated_at
           })
-        : await deactivateProvider(createBrowserClient(), workspace.scope, statusTarget.id, {
+        : await deactivateProvider(createDataBrowserClient(), workspace.scope, statusTarget.id, {
             attempted: { estado: nextStatus },
             base: statusTarget,
             expectedUpdatedAt: statusTarget.updated_at
@@ -433,7 +431,7 @@ export default function ProveedoresPage() {
     setIsSaving(true);
     setMutationError(null);
 
-    const result = await deleteProvider(createBrowserClient(), workspace.scope, deleteTarget.id);
+    const result = await deleteProvider(createDataBrowserClient(), workspace.scope, deleteTarget.id);
     setIsSaving(false);
 
     if (!result.ok) {
@@ -462,7 +460,7 @@ export default function ProveedoresPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await updateProvider(createBrowserClient(), workspace.scope, providerId, input, {
+    const result = await updateProvider(createDataBrowserClient(), workspace.scope, providerId, input, {
       attempted: input,
       expectedUpdatedAt
     });
@@ -497,12 +495,12 @@ export default function ProveedoresPage() {
     const nextStatus = provider.estado === "activo" ? "inactivo" : "activo";
     const result =
       nextStatus === "activo"
-        ? await activateProvider(createBrowserClient(), workspace.scope, provider.id, {
+        ? await activateProvider(createDataBrowserClient(), workspace.scope, provider.id, {
             attempted: { estado: nextStatus },
             base: provider,
             expectedUpdatedAt
           })
-        : await deactivateProvider(createBrowserClient(), workspace.scope, provider.id, {
+        : await deactivateProvider(createDataBrowserClient(), workspace.scope, provider.id, {
             attempted: { estado: nextStatus },
             base: provider,
             expectedUpdatedAt

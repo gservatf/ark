@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PresenceBar } from "@/components/shared/PresenceBar";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import {
   createPartida,
@@ -51,7 +52,6 @@ import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { usePresenceChannel } from "@/lib/realtime/usePresenceChannel";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import {
   parsePartidaFilters,
   partidaFilterDefaults,
@@ -118,7 +118,7 @@ export default function PartidasPage() {
     setLoadError(null);
     setMutationError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const workspaceResult = await resolveOrganizationWorkspace(supabase);
 
     if (!workspaceResult.ok) {
@@ -323,7 +323,7 @@ export default function PartidasPage() {
       return null;
     }
 
-    const result = await createPartidaCategoria(createBrowserClient(), workspace.scope, { nombre });
+    const result = await createPartidaCategoria(createDataBrowserClient(), workspace.scope, { nombre });
 
     if (!result.ok) {
       setMutationError(errorMessage(result.error));
@@ -344,7 +344,7 @@ export default function PartidasPage() {
       return null;
     }
 
-    const result = await createPartidaSubcategoria(createBrowserClient(), workspace.scope, {
+    const result = await createPartidaSubcategoria(createDataBrowserClient(), workspace.scope, {
       categoria_id: categoriaId,
       nombre
     });
@@ -369,7 +369,7 @@ export default function PartidasPage() {
     }
 
     const trimmedCode = codigo.trim();
-    const result = await createUnidadMedida(createBrowserClient(), workspace.scope, {
+    const result = await createUnidadMedida(createDataBrowserClient(), workspace.scope, {
       codigo: trimmedCode,
       nombre: trimmedCode
     });
@@ -393,7 +393,7 @@ export default function PartidasPage() {
       return null;
     }
 
-    const result = await updateUnidadMedida(createBrowserClient(), workspace.scope, unidadId, values);
+    const result = await updateUnidadMedida(createDataBrowserClient(), workspace.scope, unidadId, values);
 
     if (!result.ok) {
       setMutationError(errorMessage(result.error));
@@ -497,7 +497,7 @@ export default function PartidasPage() {
     setMutationError(null);
 
     const basePartida = editingId ? partidas.find((partida) => partida.id === editingId) : undefined;
-    const client = createBrowserClient();
+    const client = createDataBrowserClient();
 
     if (editingId) {
       const partidaResult = await updatePartida(client, workspace.scope, editingId, formData, {
@@ -588,7 +588,7 @@ export default function PartidasPage() {
     setIsSaving(true);
     setMutationError(null);
 
-    const result = await deactivatePartida(createBrowserClient(), workspace.scope, deactivateTarget.id, {
+    const result = await deactivatePartida(createDataBrowserClient(), workspace.scope, deactivateTarget.id, {
       attempted: { estado: "inactivo" },
       base: deactivateTarget,
       expectedUpdatedAt: deactivateTarget.updated_at
@@ -627,7 +627,7 @@ export default function PartidasPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await updatePartida(createBrowserClient(), workspace.scope, partidaId, input, {
+    const result = await updatePartida(createDataBrowserClient(), workspace.scope, partidaId, input, {
       attempted: input,
       expectedUpdatedAt
     });
@@ -658,7 +658,7 @@ export default function PartidasPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await deactivatePartida(createBrowserClient(), workspace.scope, partida.id, {
+    const result = await deactivatePartida(createDataBrowserClient(), workspace.scope, partida.id, {
       attempted: { estado: "inactivo" },
       base: partida,
       expectedUpdatedAt
