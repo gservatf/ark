@@ -164,6 +164,13 @@ Estado Fase 1.10:
 - No se movio logica de permisos, invitaciones ni membresias; no habia `.from(...)` ni `.rpc(...)` directo en esta pantalla.
 - Supabase sigue siendo la implementacion interna actual; Auth, middleware, Realtime, Storage, presupuestos, API routes y migraciones no se tocaron.
 
+Estado Fase 1.12:
+
+- `lib/auth/client.ts` introduce una fachada browser neutral para Auth con `getCurrentUser()` y `signOut()`.
+- `Topbar` ya no llama directamente `supabase.auth.getUser()` ni `supabase.auth.signOut()`.
+- `Topbar` tampoco importa `createBrowserClient` desde `lib/supabase/browser`; para datos usa `createDataBrowserClient` y para Auth usa la nueva fachada.
+- Supabase Auth sigue siendo la implementacion interna actual de la fachada; login, registro, callback, recuperacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

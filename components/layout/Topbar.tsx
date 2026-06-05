@@ -23,13 +23,14 @@ import { InvitationNotificationsPanel } from "@/components/layout/InvitationNoti
 import { menuItems } from "@/components/layout/Sidebar";
 import { useWorkspaceNavigation } from "@/components/layout/useWorkspaceNavigation";
 import { ProjectCreateDialog } from "@/components/projects/ProjectCreateDialog";
+import { getCurrentUser, signOut } from "@/lib/auth/client";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { listPartidas } from "@/lib/data/items";
 import { createProject } from "@/lib/data/projects";
 import { listProviders } from "@/lib/data/providers";
 import { listResources } from "@/lib/data/resources";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { buildGlobalSearchResults, type GlobalSearchResult } from "@/lib/search/global";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 import {
   clearStoredActiveProjectId,
@@ -43,7 +44,7 @@ import type { Partida, Proveedor, Recurso } from "@/types/domain";
 export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = useMemo(() => createBrowserClient(), []);
+  const supabase = useMemo(() => createDataBrowserClient(), []);
   const {
     activeOrganization,
     activeProject,
@@ -84,14 +85,12 @@ export function Topbar() {
 
   useEffect(() => {
     async function loadUser() {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       setUserEmail(user?.email ?? null);
     }
 
     void loadUser();
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     async function loadSearchData() {
@@ -143,13 +142,13 @@ export function Topbar() {
     setIsSigningOut(true);
 
     try {
-      await supabase.auth.signOut();
+      await signOut();
       router.replace("/login");
       router.refresh();
     } catch {
       setIsSigningOut(false);
     }
-  }, [isSigningOut, router, supabase]);
+  }, [isSigningOut, router]);
 
   const handleCreateProject = useCallback(
     async (input: ProjectInput) => {
