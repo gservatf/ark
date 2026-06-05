@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PresenceBar } from "@/components/shared/PresenceBar";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { isOptimisticConflict } from "@/lib/data/conflicts";
 import { ConfirmDeactivateDialog } from "@/components/recursos/ConfirmDeactivateDialog";
 import {
@@ -55,7 +56,6 @@ import type { ActivityRealtimePayload } from "@/lib/realtime/activity";
 import type { PresenceTarget } from "@/lib/realtime/presence";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
 import { usePresenceChannel } from "@/lib/realtime/usePresenceChannel";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import {
   parseResourceFilters,
   resourceFilterDefaults,
@@ -155,7 +155,7 @@ export default function RecursosPage() {
       setIsHistoryLoading(true);
     }
 
-    const result = await listResourcePriceHistory(createBrowserClient(), scope, resourceId);
+    const result = await listResourcePriceHistory(createDataBrowserClient(), scope, resourceId);
 
     if (options.showLoading !== false) {
       setIsHistoryLoading(false);
@@ -183,7 +183,7 @@ export default function RecursosPage() {
       setIsQuotesLoading(true);
     }
 
-    const result = await listResourceQuotes(createBrowserClient(), scope, resourceId);
+    const result = await listResourceQuotes(createDataBrowserClient(), scope, resourceId);
 
     if (options.showLoading !== false) {
       setIsQuotesLoading(false);
@@ -202,7 +202,7 @@ export default function RecursosPage() {
     setLoadError(null);
     setMutationError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const workspaceResult = await resolveOrganizationWorkspace(supabase);
 
     if (!workspaceResult.ok) {
@@ -377,7 +377,7 @@ export default function RecursosPage() {
         return false;
       }
 
-      const supabase = createBrowserClient();
+      const supabase = createDataBrowserClient();
 
       if (payload.entityType === "recurso") {
         if (payload.action.includes("delete") || payload.action.includes("remove")) {
@@ -591,7 +591,7 @@ export default function RecursosPage() {
     }
 
     const trimmedCode = codigo.trim();
-    const result = await createUnidadMedida(createBrowserClient(), workspace.scope, {
+    const result = await createUnidadMedida(createDataBrowserClient(), workspace.scope, {
       codigo: trimmedCode,
       nombre: trimmedCode
     });
@@ -612,7 +612,7 @@ export default function RecursosPage() {
       return null;
     }
 
-    const result = await updateUnidadMedida(createBrowserClient(), workspace.scope, unidadId, values);
+    const result = await updateUnidadMedida(createDataBrowserClient(), workspace.scope, unidadId, values);
 
     if (!result.ok) {
       setMutationError(errorMessage(result.error));
@@ -665,7 +665,7 @@ export default function RecursosPage() {
     setIsSaving(true);
     setMutationError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const baseResource = editingId ? resources.find((resource) => resource.id === editingId) : undefined;
     const result = editingId
       ? await updateResource(supabase, workspace.scope, editingId, formData, {
@@ -730,12 +730,12 @@ export default function RecursosPage() {
     setMutationError(null);
 
     const result = editingQuoteId
-      ? await updateResourceQuote(createBrowserClient(), workspace.scope, editingQuoteId, formData, {
+      ? await updateResourceQuote(createDataBrowserClient(), workspace.scope, editingQuoteId, formData, {
           attempted: formData,
           base: editingQuote,
           expectedUpdatedAt: editingQuote?.updated_at
         })
-      : await createResourceQuote(createBrowserClient(), workspace.scope, formData);
+      : await createResourceQuote(createDataBrowserClient(), workspace.scope, formData);
 
     setIsSaving(false);
 
@@ -762,7 +762,7 @@ export default function RecursosPage() {
     }
 
     setIsSaving(true);
-    const result = await deactivateResourceQuote(createBrowserClient(), workspace.scope, quote.id, {
+    const result = await deactivateResourceQuote(createDataBrowserClient(), workspace.scope, quote.id, {
       attempted: { es_preferido_interno: false, estado: "inactivo" },
       base: quote,
       expectedUpdatedAt: quote.updated_at
@@ -797,7 +797,7 @@ export default function RecursosPage() {
     setIsSaving(true);
     setMutationError(null);
 
-    const result = await deactivateResource(createBrowserClient(), workspace.scope, deactivateTarget.id, {
+    const result = await deactivateResource(createDataBrowserClient(), workspace.scope, deactivateTarget.id, {
       attempted: { estado: "inactivo" },
       base: deactivateTarget,
       expectedUpdatedAt: deactivateTarget.updated_at
@@ -837,7 +837,7 @@ export default function RecursosPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await updateResource(createBrowserClient(), workspace.scope, resourceId, input, {
+    const result = await updateResource(createDataBrowserClient(), workspace.scope, resourceId, input, {
       attempted: input,
       expectedUpdatedAt
     });
@@ -870,7 +870,7 @@ export default function RecursosPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await deactivateResource(createBrowserClient(), workspace.scope, resource.id, {
+    const result = await deactivateResource(createDataBrowserClient(), workspace.scope, resource.id, {
       attempted: { estado: "inactivo" },
       base: resource,
       expectedUpdatedAt
@@ -901,7 +901,7 @@ export default function RecursosPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await updateResourceQuote(createBrowserClient(), workspace.scope, quoteId, input, {
+    const result = await updateResourceQuote(createDataBrowserClient(), workspace.scope, quoteId, input, {
       attempted: input,
       expectedUpdatedAt
     });
@@ -932,7 +932,7 @@ export default function RecursosPage() {
 
     setIsSaving(true);
     setMutationError(null);
-    const result = await deactivateResourceQuote(createBrowserClient(), workspace.scope, quote.id, {
+    const result = await deactivateResourceQuote(createDataBrowserClient(), workspace.scope, quote.id, {
       attempted: { es_preferido_interno: false, estado: "inactivo" },
       base: quote,
       expectedUpdatedAt

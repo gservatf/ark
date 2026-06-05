@@ -1,5 +1,5 @@
 import { proveedorInputSchema, type ProveedorInput } from "../validations/providers";
-import type { Proveedor } from "../../types/domain";
+import type { Proveedor, Recurso } from "../../types/domain";
 
 import { getChangedFields, insertActivityEvent } from "./audit";
 import { conflictFailureFromLatest, getExpectedUpdatedAt } from "./conflicts";
@@ -14,6 +14,28 @@ import { validateDataScope } from "./scope";
 import type { DataClient, DataResult, DataScope, OptimisticMutationOptions } from "./types";
 
 export type ProviderUpdateInput = Partial<ProveedorInput>;
+
+export async function listProviderLinkedResources(
+  client: DataClient,
+  scope: DataScope
+): Promise<DataResult<Recurso[]>> {
+  const scopeResult = validateDataScope(scope);
+
+  if (!scopeResult.ok) {
+    return scopeResult;
+  }
+
+  const { data, error } = await client
+    .from("recursos")
+    .select("*")
+    .eq("organizacion_id", scopeResult.data.organizacionId);
+
+  if (error) {
+    return dataFailure(normalizeSupabaseError(error, "proveedores.linkedResources"));
+  }
+
+  return dataSuccess(data || []);
+}
 
 export async function listProviders(
   client: DataClient,
@@ -301,6 +323,7 @@ export const providersRepository = {
   deactivateProvider,
   deleteProvider,
   getProviderById,
+  listProviderLinkedResources,
   listProviders,
   updateProvider
 };
