@@ -298,6 +298,14 @@ Estado Fase 1.35:
 - Se conserva el flujo visible: code valido redirige al destino seguro, ausencia de code o error redirige a `/login?oauth=error`.
 - La sanitizacion de `next`, cookies SSR, sesion, middleware, login, registro, recuperacion, actualizacion, onboarding, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.38:
+
+- `server/organizations/invitations.ts` prepara una fachada server-side para invitaciones con `createOrganizationInvitations()`, `regenerateOrganizationInvitation()`, `parseInvitationEmails()`, `buildInvitationUrl()` y `sendInvitationEmail()`.
+- La fachada conserva la forma de respuesta actual (`invitation`, `invitations`, `acceptUrl`, `acceptUrls`, `createdCount`, `emailStatus`) para una migracion posterior de la API route sin cambiar el contrato visible.
+- Supabase/RPC/RLS sigue siendo la implementacion interna mediante `createServerClient()`, `createOrganizationInvitation()` y `regenerateOrganizationInvitationToken()`.
+- Resend/correo sigue siendo la implementacion interna mediante `buildInvitationEmail()` y `sendProductEmail()`.
+- `app/api/organizaciones/invitaciones/route.ts`, middleware, callback Auth, presupuestos, Realtime, migraciones, RPCs y permisos no se tocaron ni se conectaron a esta fachada todavia.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
