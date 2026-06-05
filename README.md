@@ -306,6 +306,13 @@ Estado Fase 1.38:
 - Resend/correo sigue siendo la implementacion interna mediante `buildInvitationEmail()` y `sendProductEmail()`.
 - `app/api/organizaciones/invitaciones/route.ts`, middleware, callback Auth, presupuestos, Realtime, migraciones, RPCs y permisos no se tocaron ni se conectaron a esta fachada todavia.
 
+Estado Fase 1.39:
+
+- `app/api/organizaciones/invitaciones/route.ts` usa `createOrganizationInvitations()` y `regenerateOrganizationInvitation()` desde `server/organizations/invitations.ts`.
+- La API route queda como capa HTTP delgada: parsea el body, conserva `400` para body invalido/errores de fachada y devuelve `200` con el mismo JSON en exito.
+- Se preserva la forma de respuesta (`invitation`, `invitations`, `acceptUrl`, `acceptUrls`, `createdCount`, `emailStatus`) y el correo fallido sigue reportandose en `emailStatus` sin romper la invitacion.
+- Supabase/RPC/RLS y Resend/correo siguen encapsulados en la fachada; middleware, callback Auth, presupuestos, Realtime, migraciones, RPCs y permisos no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
