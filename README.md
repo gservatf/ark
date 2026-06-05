@@ -220,6 +220,13 @@ Estado Fase 1.20:
 - Supabase Auth sigue siendo la implementacion interna actual; `/registro` todavia no fue migrado a la fachada.
 - Callback, middleware, onboarding, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.21:
+
+- `/registro` usa `signUpWithEmail()` desde `lib/auth/client.ts` y ya no contiene la llamada directa al endpoint REST `/auth/v1/signup`.
+- Se conservaron formulario, validacion de contrasena, CAPTCHA, reset del captcha, mensajes visibles, registro pendiente de confirmacion y redireccion a `/onboarding` cuando hay sesion inmediata.
+- Supabase Auth sigue siendo la implementacion interna actual de la fachada.
+- Callback, middleware, onboarding, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

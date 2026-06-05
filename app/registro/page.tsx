@@ -7,43 +7,9 @@ import { useState } from "react";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TurnstileCaptcha, isCaptchaEnabled } from "@/components/auth/TurnstileCaptcha";
 import { Button } from "@/components/shared/Button";
+import { signUpWithEmail } from "@/lib/auth/client";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { passwordRequirementsMessage, validatePassword } from "@/lib/auth/security";
-import { buildAppUrl, getSupabaseBrowserConfig } from "@/lib/supabase/config";
-
-type SignupResult = {
-  session: unknown | null;
-};
-
-async function signUpWithEmail(input: { captchaToken: string | null; email: string; password: string }) {
-  const { supabaseKey, supabaseUrl } = getSupabaseBrowserConfig();
-  const redirectTo = buildAppUrl("/onboarding");
-  const response = await fetch(`${supabaseUrl}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`, {
-    body: JSON.stringify({
-      data: {},
-      email: input.email,
-      gotrue_meta_security: input.captchaToken ? { captcha_token: input.captchaToken } : {},
-      password: input.password
-    }),
-    headers: {
-      apikey: supabaseKey,
-      Authorization: `Bearer ${supabaseKey}`,
-      "Content-Type": "application/json",
-      "X-Client-Info": "cyp-web-signup"
-    },
-    method: "POST"
-  });
-
-  const payload = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(payload?.msg || payload?.message || `Supabase Auth respondio ${response.status}.`);
-  }
-
-  return {
-    session: payload?.session ?? null
-  } satisfies SignupResult;
-}
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -71,19 +37,16 @@ export default function RegistroPage() {
     }
 
     setIsLoading(true);
-    const result = await signUpWithEmail({ captchaToken, email, password }).catch((requestError: Error) => ({
-      error: requestError,
-      session: null
-    }));
+    const result = await signUpWithEmail({ captchaToken, email, password });
     setIsLoading(false);
     setCaptchaResetSignal((current) => current + 1);
 
-    if ("error" in result) {
+    if (!result.ok) {
       setError(getAuthErrorMessage(result.error, "No se pudo crear la cuenta."));
       return;
     }
 
-    if (!result.session) {
+    if (!result.data.hasSession) {
       setMessage("Cuenta creada. Revisa tu correo para confirmar el acceso antes de iniciar sesion.");
       return;
     }
