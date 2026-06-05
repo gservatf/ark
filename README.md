@@ -192,6 +192,13 @@ Estado Fase 1.15:
 - Supabase Auth sigue siendo la implementacion interna actual de la fachada.
 - Login, registro, callback, actualizacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.16:
+
+- `/actualizar-clave` ya no importa `createBrowserClient` ni llama directamente `supabase.auth.updateUser()`.
+- La pantalla usa `updatePassword()` desde `lib/auth/client.ts`, conservando validacion de contrasena, mensaje de error y redireccion final a `/?auth=password-updated`.
+- Supabase Auth sigue siendo la implementacion interna actual de la fachada.
+- Login, registro, callback, recuperacion de clave, onboarding, middleware, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

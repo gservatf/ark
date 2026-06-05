@@ -5,8 +5,8 @@ import { useState } from "react";
 
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { Button } from "@/components/shared/Button";
+import { updatePassword } from "@/lib/auth/client";
 import { passwordRequirementsMessage, validatePassword } from "@/lib/auth/security";
-import { createBrowserClient } from "@/lib/supabase/browser";
 
 export default function ActualizarClavePage() {
   const router = useRouter();
@@ -24,11 +24,10 @@ export default function ActualizarClavePage() {
     }
 
     setIsLoading(true);
-    const supabase = createBrowserClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const updateResult = await updatePassword({ password });
     setIsLoading(false);
 
-    if (updateError) {
+    if (!updateResult.ok) {
       setError("No se pudo actualizar la contrasena. Abre nuevamente el enlace de recuperacion.");
       return;
     }
