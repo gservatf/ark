@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import {
   clearStoredActiveProjectId,
   clearWorkspaceCache,
@@ -10,7 +11,6 @@ import {
   setStoredActiveOrganizationId,
   type ProjectWorkspace
 } from "@/lib/data/workspace";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import type { Proyecto } from "@/types/domain";
 
 export function useWorkspaceNavigation() {
@@ -24,7 +24,7 @@ export function useWorkspaceNavigation() {
     setIsLoading(true);
     setError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const result = await resolveProjectWorkspace(supabase, requestedProjectId);
 
     if (!result.ok) {
@@ -49,7 +49,7 @@ export function useWorkspaceNavigation() {
 
   const selectOrganization = useCallback(
     async (organizationId: string) => {
-      const supabase = createBrowserClient();
+      const supabase = createDataBrowserClient();
       setStoredActiveOrganizationId(organizationId);
       clearStoredActiveProjectId();
       clearWorkspaceCache(supabase);

@@ -21,12 +21,12 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { formatCurrency } from "@/components/presupuestos/budget-ui";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { formatDisplayDate } from "@/lib/format/date";
 import { getReportsDashboard, type ReportsDashboard } from "@/lib/data/reports";
 import type { DataScope } from "@/lib/data/types";
 import { resolveOrganizationWorkspace } from "@/lib/data/workspace";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 const sourceTone = {
@@ -44,7 +44,7 @@ export default function ReportesClient() {
     setIsLoading(true);
     setLoadError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const workspaceResult = await resolveOrganizationWorkspace(supabase);
 
     if (!workspaceResult.ok) {

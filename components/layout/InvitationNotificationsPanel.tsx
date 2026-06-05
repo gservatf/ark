@@ -4,6 +4,7 @@ import { CheckCircle2, Clock, Mail, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import {
   acceptOrganizationInvitationById,
   listOrganizationInvitationNotifications,
@@ -17,7 +18,6 @@ import {
   clearWorkspaceCache,
   setStoredActiveOrganizationId
 } from "@/lib/data/workspace";
-import { createBrowserClient } from "@/lib/supabase/browser";
 
 type InvitationNotificationsPanelProps = {
   activeOrganization?: OrganizationSummary | null;
@@ -32,7 +32,7 @@ export function InvitationNotificationsPanel({
   onPendingCountChange,
   open
 }: InvitationNotificationsPanelProps) {
-  const supabase = useMemo(() => createBrowserClient(), []);
+  const supabase = useMemo(() => createDataBrowserClient(), []);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
   const [adminNotifications, setAdminNotifications] = useState<OrganizationInvitation[]>([]);
   const [error, setError] = useState<string | null>(null);

@@ -25,12 +25,12 @@ import { DataTable } from "@/components/shared/DataTable";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import { listBudgetDashboardProjects, type BudgetDashboardProject } from "@/lib/data/budgets";
 import { createProject } from "@/lib/data/projects";
 import type { DataScope } from "@/lib/data/types";
 import { resolveOrganizationWorkspace, setStoredActiveProjectId, type OrganizationSummary } from "@/lib/data/workspace";
 import { useActivitySubscription } from "@/lib/realtime/useActivitySubscription";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import type { ProjectInput } from "@/lib/validations/projects";
 
 export default function HomePage() {
@@ -50,7 +50,7 @@ export default function HomePage() {
     setIsLoading(true);
     setLoadError(null);
 
-    const supabase = createBrowserClient();
+    const supabase = createDataBrowserClient();
     const workspaceResult = await resolveOrganizationWorkspace(supabase);
 
     if (!workspaceResult.ok) {
@@ -143,7 +143,7 @@ export default function HomePage() {
 
       setIsCreatingProject(true);
       setCreateProjectError(null);
-      const supabase = createBrowserClient();
+      const supabase = createDataBrowserClient();
       const result = await createProject(supabase, scope, input);
       setIsCreatingProject(false);
 

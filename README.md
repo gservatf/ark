@@ -149,6 +149,14 @@ Estado Fase 1.8:
 - La logica de sincronizacion de recursos APU en la pantalla de listado sigue siendo deuda tecnica controlada para una fase posterior; no se movio para evitar cambiar comportamiento.
 - Supabase sigue siendo la implementacion interna actual; Auth, middleware, Realtime, Storage, presupuestos y migraciones no se tocaron.
 
+Estado Fase 1.9:
+
+- Dashboard, reportes, panel de actividad, navegacion de workspace e invitaciones del layout ya no importan `createBrowserClient` desde `lib/supabase/browser`.
+- Esos modulos usan `createDataBrowserClient` para pasar el cliente actual a fachadas de `lib/data`.
+- No se movieron queries porque los modulos modificados ya consumen repositorios o resolvers de `lib/data`.
+- Quedan fuera de esta fase: Auth, onboarding, Topbar, Realtime, middleware, configuracion de organizaciones y presupuestos.
+- Supabase sigue siendo la implementacion interna actual; no se tocaron base de datos, Storage, migraciones ni RPCs criticos.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

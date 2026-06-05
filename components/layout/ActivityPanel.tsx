@@ -4,13 +4,13 @@ import { Bell, Clock, Wifi } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { listActivityEvents } from "@/lib/data/activity";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import type { DataScope } from "@/lib/data/types";
 import {
   getActivityToastMessage,
   type ActivityRealtimePayload
 } from "@/lib/realtime/activity";
 import type { ActivityConnectionStatus } from "@/lib/realtime/useActivitySubscription";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import type { ActivityEvent } from "@/types/domain";
 
 type ActivityPanelProps = {
@@ -31,7 +31,7 @@ export function ActivityPanel({ open, scope, status }: ActivityPanelProps) {
 
     setIsLoading(true);
     setError(null);
-    const result = await listActivityEvents(createBrowserClient(), scope);
+    const result = await listActivityEvents(createDataBrowserClient(), scope);
 
     if (!result.ok) {
       setError(result.error.message);
