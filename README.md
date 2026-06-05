@@ -249,6 +249,13 @@ Estado Fase 1.26:
 - Supabase SSR sigue siendo la implementacion interna mediante `lib/supabase/server.ts`; no se cambiaron cookies ni adaptadores SSR.
 - Middleware, callback OAuth, onboarding, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a esta fachada todavia.
 
+Estado Fase 1.27:
+
+- `server/workspace/onboarding.ts` prepara una frontera server-side neutral para workspace/onboarding con `hasActiveWorkspace()` y `needsOnboarding()`.
+- El criterio preservado es la existencia de una membresia activa en `organizacion_miembros` para el usuario autenticado.
+- Las funciones devuelven `DataResult<T>` y contratos propios (`ActiveWorkspaceStatus`, `WorkspaceOnboardingStatus`) sin exponer tipos Supabase.
+- Supabase/RLS sigue siendo la implementacion interna mediante `lib/supabase/server.ts`; middleware, callback, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a esta fachada todavia.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
