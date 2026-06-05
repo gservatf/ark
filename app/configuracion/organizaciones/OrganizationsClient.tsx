@@ -23,6 +23,7 @@ import { Button } from "@/components/shared/Button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { createDataBrowserClient } from "@/lib/data/browser-client";
 import {
   acceptOrganizationInvitation,
   acceptOrganizationInvitationById,
@@ -44,7 +45,6 @@ import {
   setStoredActiveOrganizationId,
   type OrganizationSummary
 } from "@/lib/data/workspace";
-import { createBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 type InviteResponse = {
@@ -74,7 +74,7 @@ const initialInviteForm: InviteForm = {
 export function OrganizationsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = useMemo(() => createBrowserClient(), []);
+  const supabase = useMemo(() => createDataBrowserClient(), []);
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [activeOrganization, setActiveOrganization] = useState<OrganizationSummary | null>(null);
   const [memberPermissions, setMemberPermissions] = useState<OrganizationMemberPermissions[]>([]);

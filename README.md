@@ -157,6 +157,13 @@ Estado Fase 1.9:
 - Quedan fuera de esta fase: Auth, onboarding, Topbar, Realtime, middleware, configuracion de organizaciones y presupuestos.
 - Supabase sigue siendo la implementacion interna actual; no se tocaron base de datos, Storage, migraciones ni RPCs criticos.
 
+Estado Fase 1.10:
+
+- `/configuracion/organizaciones` ya no importa `createBrowserClient` desde `lib/supabase/browser`.
+- `OrganizationsClient` usa `createDataBrowserClient` para pasar el cliente actual a fachadas de `lib/data`.
+- No se movio logica de permisos, invitaciones ni membresias; no habia `.from(...)` ni `.rpc(...)` directo en esta pantalla.
+- Supabase sigue siendo la implementacion interna actual; Auth, middleware, Realtime, Storage, presupuestos, API routes y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
