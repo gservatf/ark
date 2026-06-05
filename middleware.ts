@@ -1,7 +1,6 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import type { Database } from "@/lib/supabase/types";
+import { createMiddlewareSupabaseClient, getMiddlewareUser } from "@/server/middleware/session";
 
 const authPaths = new Set([
   "/login",
@@ -11,10 +10,6 @@ const authPaths = new Set([
 ]);
 const guestOnlyAuthPaths = new Set(["/login", "/registro", "/recuperar-clave"]);
 const middlewareTimeoutMs = 2000;
-
-function cleanPublicEnvValue(value: string | undefined) {
-  return value?.replace(/^\uFEFF/, "").trim();
-}
 
 function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
   return Promise.race([
@@ -27,41 +22,27 @@ function withTimeout<T>(promise: PromiseLike<T>, label: string): Promise<T> {
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const supabaseContext = createMiddlewareSupabaseClient(request, response);
 
-  const supabaseUrl = cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const supabaseKey =
-    cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
-    cleanPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseContext) {
     return response;
   }
 
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
-    cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value;
-      },
-      set(name: string, value: string, options) {
-        request.cookies.set({ ...options, name, value });
-        response = NextResponse.next({ request });
-        response.cookies.set({ ...options, name, value });
-      },
-      remove(name: string, options) {
-        request.cookies.set({ ...options, name, value: "" });
-        response = NextResponse.next({ request });
-        response.cookies.set({ ...options, name, value: "" });
-      }
-    }
-  });
+  const supabase = supabaseContext.client;
 
   let user;
 
   try {
-    const userResult = await withTimeout(supabase.auth.getUser(), "auth.getUser");
-    user = userResult.data.user;
+    const userResult = await withTimeout(getMiddlewareUser(supabase), "auth.getUser");
+    response = supabaseContext.getResponse();
+
+    if (!userResult.ok) {
+      return response;
+    }
+
+    user = userResult.data;
   } catch {
-    return response;
+    return supabaseContext.getResponse();
   }
 
   const { pathname } = request.nextUrl;
@@ -97,7 +78,7 @@ export async function middleware(request: NextRequest) {
       );
       data = membershipResult.data;
     } catch {
-      return response;
+      return supabaseContext.getResponse();
     }
 
     if (!data) {

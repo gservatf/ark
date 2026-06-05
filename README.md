@@ -270,6 +270,13 @@ Estado Fase 1.30:
 - `getMiddlewareWorkspaceStatus()` queda listo para usar `hasVisibleActiveWorkspaceWithClient()` y preservar el criterio actual basado en membresia activa visible por RLS/sesion.
 - Middleware real, callback, cookies en runtime real, redirecciones, Realtime, presupuestos y migraciones no se tocaron ni se conectaron a este helper todavia.
 
+Estado Fase 1.31:
+
+- `middleware.ts` usa `createMiddlewareSupabaseClient()` para crear el cliente Supabase SSR y `getMiddlewareUser()` para consultar el usuario autenticado.
+- Se mantiene el timeout de 2 segundos con la etiqueta `auth.getUser`, el comportamiento tolerante si falta configuracion Supabase y la salida sin bloqueo si falla la consulta de usuario.
+- La consulta directa a `organizacion_miembros`, el criterio de onboarding, rutas publicas, rutas guest-only, cookies reales y redirecciones se mantienen intactas.
+- `getMiddlewareWorkspaceStatus()` queda pendiente para una fase posterior; callback, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos
