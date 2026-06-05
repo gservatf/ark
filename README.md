@@ -213,6 +213,13 @@ Estado Fase 1.18:
 - `/login` ya no importa `createBrowserClient` ni llama directamente `supabase.auth.signInWithOAuth()`; el boton de Google conserva provider, `redirectTo`, manejo de `next` y mensajes visibles.
 - El callback OAuth sigue dependiendo de Supabase y no fue tocado; registro, middleware, onboarding, Realtime, presupuestos y migraciones tampoco se tocaron.
 
+Estado Fase 1.20:
+
+- `lib/auth/contracts.ts` amplia `SignUpInput` y agrega `SignUpResult` para distinguir registro con sesion inmediata frente a registro pendiente de confirmacion.
+- `lib/auth/client.ts` agrega `signUpWithEmail()`, conservando internamente el endpoint REST `/auth/v1/signup`, `redirect_to`, headers, CAPTCHA `gotrue_meta_security.captcha_token` y lectura de `payload.session`.
+- Supabase Auth sigue siendo la implementacion interna actual; `/registro` todavia no fue migrado a la fachada.
+- Callback, middleware, onboarding, Realtime, presupuestos y migraciones no se tocaron.
+
 ## Modelo funcional actual
 
 ### Multi-organizacion y permisos

@@ -34,7 +34,16 @@ export type SignInInput = {
   password: string;
 };
 
-export type SignUpInput = SignInInput;
+export type SignUpInput = {
+  captchaToken?: string | null;
+  email: string;
+  password: string;
+  redirectTo?: string;
+};
+
+export type SignUpResult = {
+  hasSession: boolean;
+};
 
 export type PasswordResetInput = {
   captchaToken?: string | null;

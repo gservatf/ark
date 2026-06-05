@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@/lib/supabase/browser";
+import { buildAppUrl, getSupabaseBrowserConfig } from "@/lib/supabase/config";
 
 import type {
   AuthError,
@@ -8,6 +9,8 @@ import type {
   OAuthSignInInput,
   PasswordResetInput,
   SignInInput,
+  SignUpInput,
+  SignUpResult,
   UpdatePasswordInput
 } from "./contracts";
 
@@ -86,6 +89,35 @@ export async function signInWithOAuth(input: OAuthSignInInput): Promise<AuthResu
   return authSuccess(null);
 }
 
+export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult<SignUpResult>> {
+  const { supabaseKey, supabaseUrl } = getSupabaseBrowserConfig();
+  const redirectTo = input.redirectTo || buildAppUrl("/onboarding");
+  const response = await fetch(`${supabaseUrl}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`, {
+    body: JSON.stringify({
+      data: {},
+      email: input.email,
+      gotrue_meta_security: input.captchaToken ? { captcha_token: input.captchaToken } : {},
+      password: input.password
+    }),
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+      "Content-Type": "application/json",
+      "X-Client-Info": "cyp-web-signup"
+    },
+    method: "POST"
+  });
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return authFailure(createAuthRestError(payload, response.status));
+  }
+
+  return authSuccess({
+    hasSession: Boolean(payload?.session)
+  });
+}
+
 function authSuccess<T>(data: T): AuthResult<T> {
   return { data, ok: true };
 }
@@ -147,4 +179,11 @@ function getAuthErrorCode(error: { code?: string; message?: string; name?: strin
   }
 
   return "unknown";
+}
+
+function createAuthRestError(payload: { message?: string; msg?: string } | null, status: number) {
+  return {
+    message: payload?.msg || payload?.message || `Supabase Auth respondio ${status}.`,
+    status
+  };
 }
